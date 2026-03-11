@@ -4,70 +4,105 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <style>
-    body { background: #f4f7f6; font-family: sans-serif; }
+    body { background: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
-    .stat-val { font-size: 1.5rem; font-weight: bold; color: #2c3e50; }
-    .upi-btn { border-radius: 8px; padding: 10px; text-decoration: none; display: inline-block; font-weight: bold; color: white; margin: 5px; }
-    .gpay { background: #4285F4; } .phonepe { background: #5f259f; } .paytm { background: #00baf2; }
+    .stat-val { font-size: 1.8rem; font-weight: bold; color: #1a535c; }
+    
+    /* UPI Shortcut Styles */
+    .upi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+    .upi-btn { 
+      padding: 12px 5px; 
+      border-radius: 10px; 
+      text-decoration: none; 
+      color: white; 
+      font-weight: 600; 
+      font-size: 0.8rem; 
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .gpay { background: #4285F4; }
+    .phonepe { background: #5f259f; }
+    .paytm { background: #00baf2; }
+    .amazon { background: #ff9900; }
+    .cred { background: #000000; }
+    .wa-pay { background: #25D366; }
+    
     .defaulter-row { background-color: #fff5f5; }
     .paid-row { background-color: #f0fff4; }
-    #qrcode img { margin: 0 auto; display: block; }
+    #qrcode img { margin: 0 auto; display: block; border: 5px solid white; border-radius: 10px; }
   </style>
 </head>
 <body>
-  <div class="container py-4">
-    <h3 class="text-center mb-4">🌙 Collection & Tracker</h3>
+  <div class="container py-3">
+    <h4 class="text-center fw-bold mb-3">🌙 Collection Dashboard</h4>
 
-    <div class="row">
-      <div class="col-md-7">
+    <div class="row g-3">
+      <div class="col-lg-8">
         <div class="card p-3">
-          <h5>Collection Progress</h5>
-          <div id="stats" class="stat-val">Loading...</div>
-          <div class="progress mt-2" style="height: 25px;">
-            <div id="progressBar" class="progress-bar bg-success" style="width: 0%">0%</div>
+          <div class="d-flex justify-content-between">
+            <h6>Progress Tracker</h6>
+            <span class="text-muted" id="targetInfo">Target: ₹1,00,000</span>
           </div>
-          <div class="mt-3">
-            <span class="badge bg-success" id="paidCount">Paid: 0</span>
-            <span class="badge bg-danger" id="unpaidCount">Unpaid: 0</span>
+          <div id="stats" class="stat-val">₹0</div>
+          <div class="progress mt-2" style="height: 12px;">
+            <div id="progressBar" class="progress-bar bg-success" style="width: 0%"></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <div class="flex-fill p-2 bg-light rounded text-center">
+              <small class="text-muted d-block">Paid Flats</small>
+              <strong id="paidCount" class="text-success">0</strong>
+            </div>
+            <div class="flex-fill p-2 bg-light rounded text-center">
+              <small class="text-muted d-block">Unpaid Flats</small>
+              <strong id="unpaidCount" class="text-danger">0</strong>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col-md-5">
-        <div class="card p-3 text-center">
-          <h6>Scan to Pay</h6>
-          <div id="qrcode"></div>
-          <div class="mt-2">
-            <a href="#" id="gpayLink" class="upi-btn gpay">GPay</a>
-            <a href="#" id="ppeLink" class="upi-btn phonepe">PhonePe</a>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <div class="card p-3">
-      <h5>📥 Record Payment</h5>
-      <div class="row g-2">
-        <div class="col-md-3"><input type="number" id="t" class="form-control" placeholder="Tower"></div>
-        <div class="col-md-3"><input type="number" id="f" class="form-control" placeholder="Flat"></div>
-        <div class="col-md-3"><input type="number" id="a" class="form-control" placeholder="Amount"></div>
-        <div class="col-md-3">
-          <select id="m" class="form-select">
-            <option value="Cash">Cash</option>
-            <option value="UPI">UPI</option>
-          </select>
+        <div class="card p-3">
+          <h6 class="mb-3">Record Collection</h6>
+          <div class="row g-2">
+            <div class="col-4"><input type="number" id="t" class="form-control" placeholder="Twr"></div>
+            <div class="col-4"><input type="number" id="f" class="form-control" placeholder="Flat"></div>
+            <div class="col-4"><input type="number" id="a" class="form-control" placeholder="Amt"></div>
+            <div class="col-12">
+              <select id="m" class="form-select">
+                <option value="Cash">Cash Payment</option>
+                <option value="UPI">UPI Payment</option>
+              </select>
+            </div>
+            <button onclick="submit()" id="subBtn" class="btn btn-primary w-100 fw-bold">Save Entry</button>
+          </div>
         </div>
-        <button onclick="submit()" class="btn btn-dark w-100 mt-2">Submit Collection</button>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card p-3 text-center">
+          <h6 class="mb-2">Digital Payment</h6>
+          <div id="qrcode"></div>
+          
+          <div class="upi-grid">
+            <a href="#" class="upi-link upi-btn gpay" data-app="gpay">G-Pay</a>
+            <a href="#" class="upi-link upi-btn phonepe" data-app="ppe">PhonePe</a>
+            <a href="#" class="upi-link upi-btn paytm" data-app="paytm">Paytm</a>
+            <a href="#" class="upi-link upi-btn amazon" data-app="amazon">Amzn Pay</a>
+            <a href="#" class="upi-link upi-btn cred" data-app="cred">CRED</a>
+            <a href="#" class="upi-link upi-btn wa-pay" data-app="wa">WhatsApp</a>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="card p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Resident Tracker</h5>
-        <input type="text" id="search" onkeyup="renderTable()" class="form-control w-50" placeholder="Search Name/Flat...">
+        <h6>Resident List</h6>
+        <input type="text" id="search" onkeyup="renderTable()" class="form-control w-50 form-control-sm" placeholder="Search...">
       </div>
       <div class="table-responsive" style="max-height: 400px;">
-        <table class="table table-sm">
-          <thead><tr><th>Flat</th><th>Name</th><th>Amount</th><th>Status</th></tr></thead>
+        <table class="table table-sm align-middle">
+          <thead class="table-light"><tr><th>Flat</th><th>Name</th><th>Amt</th><th>Status</th></tr></thead>
           <tbody id="residentTable"></tbody>
         </table>
       </div>
@@ -80,10 +115,30 @@
 
     function init() {
       google.script.run.withSuccessHandler(config => {
-        generateQR(config.upiId, config.payeeName);
-        setupUpiLinks(config.upiId, config.payeeName);
+        setupUpiShortcuts(config.upiId, config.payeeName);
       }).getUpiConfig();
       loadData();
+    }
+
+    function setupUpiShortcuts(upi, name) {
+      const base = `upi://pay?pa=${upi}&pn=${encodeURIComponent(name)}&cu=INR`;
+      
+      // Standard QR
+      const qr = qrcode(0, 'M');
+      qr.addData(base);
+      qr.make();
+      document.getElementById('qrcode').innerHTML = qr.createImgTag(4);
+
+      // Map specialized intents
+      const links = document.querySelectorAll('.upi-link');
+      links.forEach(link => {
+        const app = link.getAttribute('data-app');
+        let finalUrl = base;
+        
+        // Some apps support direct package targeting on Android, 
+        // but the standard UPI URI works best for cross-platform.
+        link.href = finalUrl;
+      });
     }
 
     function loadData() {
@@ -94,56 +149,44 @@
       }).getResidentData();
     }
 
-    function generateQR(upi, name) {
-      const url = `upi://pay?pa=${upi}&pn=${encodeURIComponent(name)}&cu=INR`;
-      const qr = qrcode(0, 'M');
-      qr.addData(url);
-      qr.make();
-      document.getElementById('qrcode').innerHTML = qr.createImgTag(4);
-    }
-
-    function setupUpiLinks(upi, name) {
-      const url = `upi://pay?pa=${upi}&pn=${encodeURIComponent(name)}&cu=INR`;
-      document.getElementById('gpayLink').href = url;
-      document.getElementById('ppeLink').href = url;
-    }
-
     function updateDashboard() {
       let total = rawData.reduce((s, r) => s + (Number(r.Payment) || 0), 0);
       let paid = rawData.filter(r => (Number(r.Payment) || 0) > 0).length;
       let percent = Math.min((total / TARGET) * 100, 100).toFixed(1);
       
-      document.getElementById('stats').innerText = `Rs. ${total.toLocaleString()}`;
+      document.getElementById('stats').innerText = `₹${total.toLocaleString()}`;
       document.getElementById('progressBar').style.width = percent + '%';
-      document.getElementById('progressBar').innerText = percent + '%';
-      document.getElementById('paidCount').innerText = `Paid: ${paid}`;
-      document.getElementById('unpaidCount').innerText = `Unpaid: ${rawData.length - paid}`;
+      document.getElementById('paidCount').innerText = paid;
+      document.getElementById('unpaidCount').innerText = rawData.length - paid;
     }
 
     function renderTable() {
       const q = document.getElementById('search').value.toLowerCase();
       const tbody = document.getElementById('residentTable');
       tbody.innerHTML = '';
-
       rawData.forEach(r => {
         if (r.Name.toLowerCase().includes(q) || r.Flat.toString().includes(q)) {
-          const isPaid = (Number(r.Payment) || 0) > 0;
-          const row = `<tr class="${isPaid ? 'paid-row' : 'defaulter-row'}">
+          const amt = Number(r.Payment) || 0;
+          tbody.innerHTML += `<tr class="${amt > 0 ? 'paid-row' : 'defaulter-row'}">
             <td>${r.Tower}-${r.Flat}</td>
             <td>${r.Name}</td>
-            <td>${r.Payment || 0}</td>
-            <td><span class="badge ${isPaid ? 'bg-success' : 'bg-danger'}">${isPaid ? 'Paid' : 'Unpaid'}</span></td>
+            <td>₹${amt}</td>
+            <td><span class="badge ${amt > 0 ? 'bg-success' : 'bg-danger'}">${amt > 0 ? 'Paid' : 'Unpaid'}</span></td>
           </tr>`;
-          tbody.innerHTML += row;
         }
       });
     }
 
     function submit() {
-      const t = document.getElementById('t').value, f = document.getElementById('f').value;
-      const a = document.getElementById('a').value, m = document.getElementById('m').value;
-      if(!t || !f || !a) return alert("Fill all fields");
-      google.script.run.withSuccessHandler(() => { alert("Saved!"); loadData(); }).recordPayment(t,f,a,m);
+      const btn = document.getElementById('subBtn');
+      const t = document.getElementById('t').value, f = document.getElementById('f').value, a = document.getElementById('a').value;
+      if(!t || !f || !a) return alert("Missing Info");
+      
+      btn.disabled = true; btn.innerText = "Saving...";
+      google.script.run.withSuccessHandler(() => {
+        btn.disabled = false; btn.innerText = "Save Entry";
+        loadData();
+      }).recordPayment(t, f, a, document.getElementById('m').value);
     }
 
     window.onload = init;
