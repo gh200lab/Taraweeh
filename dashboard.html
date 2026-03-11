@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Collection Dashboard</title>
+  <style>
+    body { font-family: system-ui, Arial; max-width: 980px; margin: 24px auto; padding: 0 12px; }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card { border: 1px solid #ddd; border-radius: 14px; padding: 14px; }
+    h1 { margin-bottom: 6px; }
+    .big { font-size: 22px; font-weight: 900; }
+    .muted { color:#666; }
+    table { width:100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align:left; }
+    input { width:100%; padding:10px; border:1px solid #ccc; border-radius:12px; margin-top:8px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  <h1>Dashboard</h1>
+  <p><a href="./index.html">Back to Entry</a></p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="muted">Target</div>
+      <div class="big" id="target">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Total Collected</div>
+      <div class="big" id="total">—</div>
+      <div class="muted" id="progress">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Remaining</div>
+      <div class="big" id="remaining">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">UPI Total</div>
+      <div class="big" id="upi">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Cash Total</div>
+      <div class="big" id="cash">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Paid Flats</div>
+      <div class="big" id="paid">—</div>
+      <div class="muted" id="paidPct">—</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Unpaid Flats (Defaulters)</div>
+      <div class="big" id="unpaid">—</div>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <div class="muted">Highest Contribution</div>
+      <div class="big" id="highest">—</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <h3 style="margin:0 0 6px;">Top Contributors</h3>
+    <table>
+      <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th><th>Total (₹)</th></tr></thead>
+      <tbody id="topBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <h3 style="margin:0 0 6px;">Defaulters (Unpaid)</h3>
+    <input id="defSearch" placeholder="Search by tower/flat/name..." />
+    <table>
+      <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th></tr></thead>
+      <tbody id="defBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <h3 style="margin:0 0 6px;">Recent Transactions</h3>
+    <table>
+      <thead><tr><th>Date</th><th>Tower-Flat</th><th>Name</th><th>Method</th><th>Amount (₹)</th></tr></thead>
+      <tbody id="recentBody"></tbody>
+    </table>
+  </div>
+
+<script>
+  // ====== CONFIG (REPLACE THIS) ======
+  const GAS_URL = "PASTE_YOUR_GAS_WEB_APP_URL_HERE";
+  // ===================================
+
+  const fmt = n => "₹" + (Number(n)||0).toLocaleString("en-IN");
+
+  async function loadStats() {
+    const res = await fetch(`${GAS_URL}?action=stats`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to load stats");
+
+    document.getElementById("target").textContent = fmt(data.target);
+    document.getElementById("total").textContent = fmt(data.total);
+    document.getElementById("remaining").textContent = fmt(data.remaining);
+    document.getElementById("upi").textContent = fmt(data.upi);
+    document.getElementById("cash").textContent = fmt(data.cash);
+
+    document.getElementById("progress").textContent =
+      `${data.progressPct}% • Remaining ${fmt(data.remaining)}`;
+
+    const highest = data.highest || { key:"", name:"", total:0 };
+    document.getElementById("highest").textContent =
+      `${highest.name || "-"} (${highest.key || "-"}) — ${fmt(highest.total || 0)}`;
+
+    // Paid/Unpaid
+    document.getElementById("paid").textContent = `${data.paidCount} / ${data.residentsCount}`;
+    const pct = data.residentsCount ? Math.round((data.paidCount / data.residentsCount) * 1000) / 10 : 0;
+    document.getElementById("paidPct").textContent = `${pct}% flats contributed`;
+    document.getElementById("unpaid").textContent = `${data.unpaidCount}`;
+
+    // Top contributors
+    const topBody = document.getElementById("topBody");
+    topBody.innerHTML = (data.topContributors || []).map((x,i)=>`
+      <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td><td>${fmt(x.total)}</td></tr>
+    `).join("");
+
+    // Defaulters + search
+    const defaulters = data.defaulters || [];
+    const defBody = document.getElementById("defBody");
+    const defSearch = document.getElementById("defSearch");
+
+    function renderDef(list) {
+      defBody.innerHTML = list.map((x,i)=>`
+        <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td></tr>
+      `).join("");
+    }
+    renderDef(defaulters);
+
+    defSearch.addEventListener("input", () => {
+      const q = defSearch.value.trim().toLowerCase();
+      const filtered = defaulters.filter(x =>
+        (x.key || "").toLowerCase().includes(q) ||
+        (x.name || "").toLowerCase().includes(q)
+      );
+      renderDef(filtered);
+    });
+
+    // Recent transactions
+    const recentBody = document.getElementById("recentBody");
+    recentBody.innerHTML = (data.recent || []).map(x => `
+      <tr>
+        <td>${new Date(x.timestamp).toLocaleString()}</td>
+        <td>${x.tower}-${x.flat}</td>
+        <td>${x.name}</td>
+        <td>${x.method}</td>
+        <td>${fmt(x.amount)}</td>
+      </tr>
+    `).join("");
+  }
+
+  loadStats().catch(err => alert(err.message || err));
+</script>
+</body>
+</html>
