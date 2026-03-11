@@ -31,6 +31,9 @@
     }
     .warnBox small{ display:block; font-weight:600; margin-top:6px; color:#6b4e00; }
 
+    .dupPick { display:none; margin-top:10px; }
+    .dupPick label { margin-top:0; }
+
     @media (max-width: 760px) { .row { flex-direction: column; } }
   </style>
 </head>
@@ -53,8 +56,15 @@
     <label>Name</label>
     <input id="name" placeholder="Auto-filled" readonly />
 
-    <!-- NEW: Duplicate warning -->
+    <!-- Duplicate warning -->
     <div id="dupWarn" class="warnBox"></div>
+
+    <!-- NEW: Choose correct name when duplicate -->
+    <div id="dupPick" class="dupPick">
+      <label>Choose Correct Name (for this Tower-Flat)</label>
+      <select id="namePick"></select>
+      <small class="muted">This selected name will be saved in Collections.</small>
+    </div>
 
     <label>Amount (₹)</label>
     <input id="amount" type="number" min="1" placeholder="e.g. 500" />
@@ -76,7 +86,7 @@
 
     <button id="submit">Save Collection</button>
     <p id="msg"></p>
-    <small>Tip: If warning shows, correct the Residents master so Tower-Flat is unique.</small>
+    <small>Tip: If duplicate warning shows, pick correct name and later fix Residents master.</small>
   </div>
 
   <div class="card">
@@ -110,15 +120,13 @@
   // ========= CONFIG =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
 
-  // CHANGE THESE:
+  // CHANGE THESE if needed:
   const UPI_ID = "yourupi@bank";
   const PAYEE_NAME = "Taraweeh Fund";
   // ==========================
 
   let residents = [];
-
-  // NEW: duplicates map => key "tower-flat" -> {count, names[]}
-  const dupMap = new Map();
+  const dupMap = new Map(); // key -> {count, names[]}
 
   const towerEl = document.getElementById("tower");
   const flatEl = document.getElementById("flat");
@@ -126,7 +134,10 @@
   const msgEl = document.getElementById("msg");
   const amtEl = document.getElementById("amount");
   const submitBtn = document.getElementById("submit");
+
   const dupWarnEl = document.getElementById("dupWarn");
+  const dupPickWrap = document.getElementById("dupPick");
+  const namePickEl = document.getElementById("namePick");
 
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
@@ -147,32 +158,67 @@
     const flats = residents.filter(r => r.tower === t).map(r => r.flat)
       .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
     flatEl.innerHTML = flats.map(f => `<option value="${f}">${f}</option>`).join("");
-    fillNameAndDupWarn();
+    updateNameAndDuplicateUI();
   }
 
-  function fillNameAndDupWarn() {
+  function updateNameAndDuplicateUI() {
     const t = towerEl.value;
     const f = flatEl.value;
     const key = `${t}-${f}`;
 
-    // Name (auto-fill first match)
+    // Auto-fill name (first match)
     const r = residents.find(x => x.tower === t && x.flat === f);
-    nameEl.value = r ? r.name : "";
+    const autoName = r ? r.name : "";
+    nameEl.value = autoName;
 
-    // NEW: Duplicate warning
+    // Duplicate logic
     const d = dupMap.get(key);
+
     if (d && d.count > 1) {
       const names = (d.names || []).filter(Boolean);
+
       dupWarnEl.style.display = "block";
       dupWarnEl.innerHTML =
         `⚠ Duplicate in Residents for <b>${key}</b> (Count: ${d.count}).` +
-        `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>` +
-        `<small>Door-to-door tip: confirm correct name and fix Residents master.</small>`;
+        `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>`;
+
+      // Show picker
+      dupPickWrap.style.display = "block";
+
+      // Populate picker:
+      // Put autoName first (if present), then rest unique
+      const options = unique([autoName, ...names].filter(Boolean));
+      namePickEl.innerHTML = options.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+
+      // Default selection:
+      if (autoName && options.includes(autoName)) namePickEl.value = autoName;
+
+      // When user selects, update readonly name field (so it matches saved value)
+      nameEl.value = namePickEl.value;
+
     } else {
       dupWarnEl.style.display = "none";
       dupWarnEl.textContent = "";
+      dupPickWrap.style.display = "none";
+      namePickEl.innerHTML = "";
+      // keep auto name as-is
+      nameEl.value = autoName;
     }
   }
+
+  // Basic HTML escaping for safe option rendering
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  namePickEl.addEventListener("change", () => {
+    nameEl.value = namePickEl.value; // keep saved name consistent
+  });
 
   async function loadResidents() {
     const res = await fetch(`${GAS_URL}?action=residents`, { cache: "no-store" });
@@ -183,7 +229,6 @@
     populateTowers();
   }
 
-  // NEW: Load duplicates once (from stats endpoint)
   async function loadDuplicates() {
     const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
     const data = await res.json();
@@ -197,6 +242,7 @@
   }
 
   async function addCollection() {
+    // IMPORTANT: nameEl already includes the chosen name if duplicate
     const payload = {
       action: "addCollection",
       tower: towerEl.value,
@@ -210,11 +256,11 @@
     };
 
     if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
+    if (!payload.name) throw new Error("Name is empty. Please select/confirm the name.");
 
-    // IMPORTANT: CORS-safe
     const resp = await fetch(GAS_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // CORS-safe
       body: JSON.stringify(payload)
     });
 
@@ -249,7 +295,7 @@
   });
 
   towerEl.addEventListener("change", populateFlats);
-  flatEl.addEventListener("change", fillNameAndDupWarn);
+  flatEl.addEventListener("change", updateNameAndDuplicateUI);
 
   // ===== UPI QR + SHORTCUTS =====
   const qrEl = document.getElementById("qr");
@@ -292,9 +338,9 @@
   (async function init() {
     try {
       setUpiLinks();
-      await loadDuplicates();  // NEW: duplicates first
-      await loadResidents();   // then residents
-      fillNameAndDupWarn();    // ensure warning reflects current selection
+      await loadDuplicates();   // duplicates first
+      await loadResidents();    // then residents
+      updateNameAndDuplicateUI();
     } catch (e) {
       setMsg(String(e.message || e), false);
     }
