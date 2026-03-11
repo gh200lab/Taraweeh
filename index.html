@@ -34,6 +34,8 @@
     .dupPick { display:none; margin-top:10px; }
     .dupPick label { margin-top:0; }
 
+    .checkRow { display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .checkRow input { width:auto; margin:0; }
     @media (max-width: 760px) { .row { flex-direction: column; } }
   </style>
 </head>
@@ -59,11 +61,16 @@
     <!-- Duplicate warning -->
     <div id="dupWarn" class="warnBox"></div>
 
-    <!-- NEW: Choose correct name when duplicate -->
+    <!-- Choose correct name when duplicate -->
     <div id="dupPick" class="dupPick">
       <label>Choose Correct Name (for this Tower-Flat)</label>
       <select id="namePick"></select>
-      <small class="muted">This selected name will be saved in Collections.</small>
+
+      <div class="checkRow">
+        <input id="markCorrected" type="checkbox" />
+        <label for="markCorrected" style="margin:0;font-weight:800;">Mark corrected (save to Corrections sheet)</label>
+      </div>
+      <small class="muted">This will store your chosen name in “Corrections” so you can fix Residents later.</small>
     </div>
 
     <label>Amount (₹)</label>
@@ -86,7 +93,7 @@
 
     <button id="submit">Save Collection</button>
     <p id="msg"></p>
-    <small>Tip: If duplicate warning shows, pick correct name and later fix Residents master.</small>
+    <small>Tip: If duplicate warning shows, pick correct name and tick “Mark corrected”.</small>
   </div>
 
   <div class="card">
@@ -120,9 +127,8 @@
   // ========= CONFIG =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
 
-  // CHANGE THESE if needed:
-  const UPI_ID = "yourupi@bank";
-  const PAYEE_NAME = "Taraweeh Fund";
+  const UPI_ID = "yourupi@bank";      // <-- change
+  const PAYEE_NAME = "Taraweeh Fund"; // <-- change
   // ==========================
 
   let residents = [];
@@ -138,6 +144,7 @@
   const dupWarnEl = document.getElementById("dupWarn");
   const dupPickWrap = document.getElementById("dupPick");
   const namePickEl = document.getElementById("namePick");
+  const markCorrectedEl = document.getElementById("markCorrected");
 
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
@@ -145,6 +152,15 @@
   }
 
   function unique(arr) { return [...new Set(arr)]; }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
   function populateTowers() {
     const towers = unique(residents.map(r => r.tower))
@@ -171,7 +187,6 @@
     const autoName = r ? r.name : "";
     nameEl.value = autoName;
 
-    // Duplicate logic
     const d = dupMap.get(key);
 
     if (d && d.count > 1) {
@@ -182,18 +197,13 @@
         `⚠ Duplicate in Residents for <b>${key}</b> (Count: ${d.count}).` +
         `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>`;
 
-      // Show picker
       dupPickWrap.style.display = "block";
+      markCorrectedEl.checked = false;
 
-      // Populate picker:
-      // Put autoName first (if present), then rest unique
       const options = unique([autoName, ...names].filter(Boolean));
       namePickEl.innerHTML = options.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
-      // Default selection:
       if (autoName && options.includes(autoName)) namePickEl.value = autoName;
-
-      // When user selects, update readonly name field (so it matches saved value)
       nameEl.value = namePickEl.value;
 
     } else {
@@ -201,23 +211,13 @@
       dupWarnEl.textContent = "";
       dupPickWrap.style.display = "none";
       namePickEl.innerHTML = "";
-      // keep auto name as-is
+      markCorrectedEl.checked = false;
       nameEl.value = autoName;
     }
   }
 
-  // Basic HTML escaping for safe option rendering
-  function escapeHtml(s) {
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
   namePickEl.addEventListener("change", () => {
-    nameEl.value = namePickEl.value; // keep saved name consistent
+    nameEl.value = namePickEl.value;
   });
 
   async function loadResidents() {
@@ -241,8 +241,43 @@
     });
   }
 
+  async function saveCorrectionIfNeeded() {
+    // Only when duplicate UI is visible and checkbox checked
+    if (dupPickWrap.style.display !== "block") return;
+    if (!markCorrectedEl.checked) return;
+
+    const tower = towerEl.value;
+    const flat = flatEl.value;
+    const key = `${tower}-${flat}`;
+    const selectedName = nameEl.value;
+
+    const d = dupMap.get(key);
+    const namesFound = d ? (d.names || []).join(" | ") : "";
+
+    const payload = {
+      action: "saveCorrection",
+      tower,
+      flat,
+      selectedName,
+      namesFound,
+      collector: document.getElementById("collector").value,
+      notes: document.getElementById("notes").value
+    };
+
+    const resp = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error("Correction save returned non-JSON: " + text.slice(0, 150)); }
+    if (!data.ok) throw new Error(data.error || "Failed to save correction");
+  }
+
   async function addCollection() {
-    // IMPORTANT: nameEl already includes the chosen name if duplicate
     const payload = {
       action: "addCollection",
       tower: towerEl.value,
@@ -270,7 +305,7 @@
     catch { throw new Error("Server returned non-JSON: " + text.slice(0, 150)); }
     if (!data.ok) throw new Error(data.error || "Save failed");
 
-    // reset fields
+    // reset entry fields
     document.getElementById("amount").value = "";
     document.getElementById("txnRef").value = "";
     document.getElementById("notes").value = "";
@@ -284,8 +319,15 @@
     setMsg("", true);
 
     try {
+      // 1) save collection
       await addCollection();
-      setMsg("Saved ✅", true);
+      // 2) optionally save correction
+      await saveCorrectionIfNeeded();
+      setMsg(markCorrectedEl.checked ? "Saved ✅ + Correction noted 📝" : "Saved ✅", true);
+
+      // reset corrected checkbox (for next entry)
+      markCorrectedEl.checked = false;
+
     } catch (e) {
       setMsg(String(e.message || e), false);
     }
@@ -317,7 +359,7 @@
     document.getElementById("btnUPI").href = upiUri;
     const query = upiUri.split("?")[1] || "";
     document.getElementById("btnGPay").href = "gpay://upi/pay?" + query;
-    document.getElementById("btnPhonePe").href = "phonepe://pay?" + query;
+    document.getElementById("btnPhonePe").href = "phonepe://upi/pay?" + query;
     document.getElementById("btnPaytm").href = "paytmmp://pay?" + query;
   }
 
@@ -338,8 +380,8 @@
   (async function init() {
     try {
       setUpiLinks();
-      await loadDuplicates();   // duplicates first
-      await loadResidents();    // then residents
+      await loadDuplicates();
+      await loadResidents();
       updateNameAndDuplicateUI();
     } catch (e) {
       setMsg(String(e.message || e), false);
