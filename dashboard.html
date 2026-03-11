@@ -12,7 +12,7 @@
     .big { font-size: 22px; font-weight: 900; }
     .muted { color:#666; }
     table { width:100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align:left; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align:left; vertical-align: top; }
     input { width:100%; padding:10px; border:1px solid #ccc; border-radius:12px; margin-top:8px; }
     button { padding:10px 12px; border-radius:12px; border:1px solid #ddd; background:#fff; cursor:pointer; }
     .barWrap { height: 14px; border-radius: 999px; background:#eee; overflow:hidden; margin-top:8px; }
@@ -75,6 +75,32 @@
     </div>
   </div>
 
+  <!-- NEW: Duplicate report -->
+  <div class="card" style="margin-top:12px;">
+    <h3 style="margin:0 0 6px;">Residents Duplicates (Tower-Flat)</h3>
+    <div class="muted" id="dupSummary">—</div>
+
+    <div class="actions">
+      <button id="exportDup">Export Duplicates CSV</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tower-Flat</th>
+          <th>Count</th>
+          <th>Names Found</th>
+        </tr>
+      </thead>
+      <tbody id="dupBody"></tbody>
+    </table>
+
+    <small class="muted">
+      Fix Residents master so each Tower-Flat appears only once. This prevents wrong names during door-to-door collection.
+    </small>
+  </div>
+
   <div class="card" style="margin-top:12px;">
     <h3 style="margin:0 0 6px;">Top Contributors</h3>
     <div class="actions">
@@ -113,10 +139,10 @@
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
   const fmt = n => "₹" + (Number(n)||0).toLocaleString("en-IN");
 
-  let lastStats = null;
   let defaultersAll = [];
   let topAll = [];
   let recentAll = [];
+  let dupAll = [];
 
   function downloadCSV(filename, rows) {
     const csv = rows.map(r =>
@@ -134,11 +160,37 @@
     URL.revokeObjectURL(url);
   }
 
+  function renderDef(list) {
+    document.getElementById("defBody").innerHTML = list.map((x,i)=>`
+      <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td></tr>
+    `).join("");
+  }
+
+  function renderDup(list) {
+    const dupSummary = document.getElementById("dupSummary");
+    const dupBody = document.getElementById("dupBody");
+
+    if (!list.length) {
+      dupSummary.textContent = "No duplicates found ✅";
+      dupBody.innerHTML = `<tr><td colspan="4" class="muted">No duplicates</td></tr>`;
+      return;
+    }
+
+    dupSummary.textContent = `Duplicates found: ${list.length} Tower-Flat entries`;
+    dupBody.innerHTML = list.map((d,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${d.key}</td>
+        <td>${d.count}</td>
+        <td>${(d.names || []).join(", ")}</td>
+      </tr>
+    `).join("");
+  }
+
   async function loadStats() {
     const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Failed to load stats");
-    lastStats = data;
 
     document.getElementById("target").textContent = fmt(data.target);
     document.getElementById("total").textContent = fmt(data.total);
@@ -184,15 +236,13 @@
         <td>${fmt(x.amount)}</td>
       </tr>
     `).join("");
+
+    // NEW: Duplicates
+    dupAll = data.duplicates || [];
+    renderDup(dupAll);
   }
 
-  function renderDef(list) {
-    document.getElementById("defBody").innerHTML = list.map((x,i)=>`
-      <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td></tr>
-    `).join("");
-  }
-
-  // Search
+  // Search defaulters
   document.getElementById("defSearch").addEventListener("input", () => {
     const q = document.getElementById("defSearch").value.trim().toLowerCase();
     const filtered = defaultersAll.filter(x =>
@@ -215,6 +265,13 @@
     downloadCSV("recent_transactions.csv",
       [["Timestamp","Tower-Flat","Name","Method","Amount"],
        ...recentAll.map(x => [new Date(x.timestamp).toISOString(), `${x.tower}-${x.flat}`, x.name, x.method, x.amount])]
+    );
+  });
+
+  document.getElementById("exportDup").addEventListener("click", () => {
+    downloadCSV("resident_duplicates.csv",
+      [["Tower-Flat","Count","Names Found"],
+       ...dupAll.map(d => [d.key, d.count, (d.names || []).join(" | ")])]
     );
   });
 
