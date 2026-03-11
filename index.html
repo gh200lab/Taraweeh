@@ -18,8 +18,19 @@
     .err { color: #c00; font-weight: 800; }
     small, .muted { color: #666; }
     a.btn { background:#111; color:#fff; text-decoration:none; padding:10px 12px; border-radius:12px; display:inline-block; }
-    .barWrap { height: 14px; border-radius: 999px; background:#eee; overflow:hidden; margin-top:8px; }
-    .bar { height: 14px; width: 0%; background:#111; }
+
+    .warnBox{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid #f3d36b;
+      background:#fff7d6;
+      color:#6b4e00;
+      display:none;
+      font-weight:700;
+    }
+    .warnBox small{ display:block; font-weight:600; margin-top:6px; color:#6b4e00; }
+
     @media (max-width: 760px) { .row { flex-direction: column; } }
   </style>
 </head>
@@ -42,6 +53,9 @@
     <label>Name</label>
     <input id="name" placeholder="Auto-filled" readonly />
 
+    <!-- NEW: Duplicate warning -->
+    <div id="dupWarn" class="warnBox"></div>
+
     <label>Amount (₹)</label>
     <input id="amount" type="number" min="1" placeholder="e.g. 500" />
 
@@ -60,18 +74,9 @@
     <label>Notes (optional)</label>
     <input id="notes" placeholder="Any note" />
 
-    <div id="pinBox" style="display:none;">
-      <label>Admin PIN</label>
-      <input id="pin" type="password" placeholder="Enter PIN" />
-      <small class="muted">PIN is checked in browser only (basic protection). For stronger security, we can enforce it in Apps Script too.</small>
-    </div>
-
     <button id="submit">Save Collection</button>
     <p id="msg"></p>
-
-    <div class="muted" id="quickStats" style="margin-top:10px;"></div>
-    <div class="barWrap"><div class="bar" id="bar"></div></div>
-    <small class="muted">Progress to ₹100,000 target (updates from backend)</small>
+    <small>Tip: If warning shows, correct the Residents master so Tower-Flat is unique.</small>
   </div>
 
   <div class="card">
@@ -105,20 +110,23 @@
   // ========= CONFIG =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
 
-  const UPI_ID = "yourupi@bank";        // <-- CHANGE
-  const PAYEE_NAME = "Taraweeh Fund";   // <-- CHANGE
-
-  const ENABLE_PIN = false;             // <-- set true if you want PIN
-  const ADMIN_PIN = "1234";             // <-- change if ENABLE_PIN=true
+  // CHANGE THESE:
+  const UPI_ID = "yourupi@bank";
+  const PAYEE_NAME = "Taraweeh Fund";
   // ==========================
 
   let residents = [];
+
+  // NEW: duplicates map => key "tower-flat" -> {count, names[]}
+  const dupMap = new Map();
+
   const towerEl = document.getElementById("tower");
   const flatEl = document.getElementById("flat");
   const nameEl = document.getElementById("name");
   const msgEl = document.getElementById("msg");
   const amtEl = document.getElementById("amount");
   const submitBtn = document.getElementById("submit");
+  const dupWarnEl = document.getElementById("dupWarn");
 
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
@@ -139,14 +147,31 @@
     const flats = residents.filter(r => r.tower === t).map(r => r.flat)
       .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
     flatEl.innerHTML = flats.map(f => `<option value="${f}">${f}</option>`).join("");
-    fillName();
+    fillNameAndDupWarn();
   }
 
-  function fillName() {
+  function fillNameAndDupWarn() {
     const t = towerEl.value;
     const f = flatEl.value;
+    const key = `${t}-${f}`;
+
+    // Name (auto-fill first match)
     const r = residents.find(x => x.tower === t && x.flat === f);
     nameEl.value = r ? r.name : "";
+
+    // NEW: Duplicate warning
+    const d = dupMap.get(key);
+    if (d && d.count > 1) {
+      const names = (d.names || []).filter(Boolean);
+      dupWarnEl.style.display = "block";
+      dupWarnEl.innerHTML =
+        `⚠ Duplicate in Residents for <b>${key}</b> (Count: ${d.count}).` +
+        `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>` +
+        `<small>Door-to-door tip: confirm correct name and fix Residents master.</small>`;
+    } else {
+      dupWarnEl.style.display = "none";
+      dupWarnEl.textContent = "";
+    }
   }
 
   async function loadResidents() {
@@ -158,17 +183,17 @@
     populateTowers();
   }
 
-  async function loadQuickStats() {
+  // NEW: Load duplicates once (from stats endpoint)
+  async function loadDuplicates() {
     const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
     const data = await res.json();
     if (!data.ok) return;
 
-    const fmt = n => "₹" + (Number(n)||0).toLocaleString("en-IN");
-    document.getElementById("quickStats").textContent =
-      `Collected ${fmt(data.total)} / ${fmt(data.target)} • Remaining ${fmt(data.remaining)} • Paid ${data.paidCount}/${data.residentsCount}`;
-
-    const pct = Math.max(0, Math.min(100, Number(data.progressPct || 0)));
-    document.getElementById("bar").style.width = pct + "%";
+    const dups = data.duplicates || [];
+    dupMap.clear();
+    dups.forEach(d => {
+      dupMap.set(String(d.key), { count: Number(d.count || 0), names: d.names || [] });
+    });
   }
 
   async function addCollection() {
@@ -186,15 +211,10 @@
 
     if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
 
-    if (ENABLE_PIN) {
-      document.getElementById("pinBox").style.display = "block";
-      const pin = String(document.getElementById("pin").value || "");
-      if (pin !== ADMIN_PIN) throw new Error("Wrong PIN");
-    }
-
+    // IMPORTANT: CORS-safe
     const resp = await fetch(GAS_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // CORS-safe
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
 
@@ -204,12 +224,11 @@
     catch { throw new Error("Server returned non-JSON: " + text.slice(0, 150)); }
     if (!data.ok) throw new Error(data.error || "Save failed");
 
-    // Reset fields
+    // reset fields
     document.getElementById("amount").value = "";
     document.getElementById("txnRef").value = "";
     document.getElementById("notes").value = "";
-    setUpiLinks();       // QR resets
-    await loadQuickStats(); // update progress bar
+    setUpiLinks();
   }
 
   submitBtn.addEventListener("click", async () => {
@@ -230,7 +249,7 @@
   });
 
   towerEl.addEventListener("change", populateFlats);
-  flatEl.addEventListener("change", fillName);
+  flatEl.addEventListener("change", fillNameAndDupWarn);
 
   // ===== UPI QR + SHORTCUTS =====
   const qrEl = document.getElementById("qr");
@@ -270,9 +289,16 @@
   amtEl.addEventListener("input", setUpiLinks);
 
   // Init
-  setUpiLinks();
-  loadResidents().catch(e => setMsg(String(e.message || e), false));
-  loadQuickStats();
+  (async function init() {
+    try {
+      setUpiLinks();
+      await loadDuplicates();  // NEW: duplicates first
+      await loadResidents();   // then residents
+      fillNameAndDupWarn();    // ensure warning reflects current selection
+    } catch (e) {
+      setMsg(String(e.message || e), false);
+    }
+  })();
 </script>
 </body>
 </html>
