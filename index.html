@@ -12,12 +12,34 @@
     button { margin-top: 14px; padding: 12px 14px; border: 0; border-radius: 12px; cursor:pointer; background:#111; color:#fff; }
     button.secondary { background:#eee; color:#111; border:1px solid #ddd; }
     button:disabled { opacity: .6; cursor:not-allowed; }
+    .row { display:flex; gap: 12px; }
+    .row > div { flex:1; }
     .ok { color: #0a7; font-weight: 800; }
     .err { color: #c00; font-weight: 800; }
+    .muted { color:#666; }
+    a.btn { background:#111; color:#fff; text-decoration:none; padding:10px 12px; border-radius:12px; display:inline-block; }
+
+    .warnBox{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid #f3d36b;
+      background:#fff7d6;
+      color:#6b4e00;
+      display:none;
+      font-weight:700;
+    }
+    .warnBox small{ display:block; font-weight:600; margin-top:6px; color:#6b4e00; }
+
+    .dupPick { display:none; margin-top:10px; }
+    .dupPick label { margin-top:0; }
+    .checkRow { display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .checkRow input { width:auto; margin:0; }
+
     .receiptBox { display:none; margin-top:12px; padding:12px; border:1px solid #ddd; border-radius:14px; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    a.btn { background:#111; color:#fff; text-decoration:none; padding:10px 12px; border-radius:12px; display:inline-block; }
-    .muted { color:#666; }
+
+    @media (max-width: 760px) { .row { flex-direction: column; } }
   </style>
 
   <!-- jsPDF for PDF receipts -->
@@ -29,20 +51,40 @@
 <p><a href="./dashboard.html">Open Dashboard</a></p>
 
 <div class="card">
-  <label>Tower</label>
-  <select id="tower"></select>
-
-  <label>Flat</label>
-  <select id="flat"></select>
+  <div class="row">
+    <div>
+      <label>Tower</label>
+      <select id="tower"></select>
+    </div>
+    <div>
+      <label>Flat</label>
+      <select id="flat"></select>
+    </div>
+  </div>
 
   <label>Name</label>
-  <input id="name" readonly />
+  <input id="name" readonly placeholder="Auto-filled" />
+
+  <!-- Duplicate warning -->
+  <div id="dupWarn" class="warnBox"></div>
+
+  <!-- Duplicate picker -->
+  <div id="dupPick" class="dupPick">
+    <label>Choose Correct Name (Duplicate Tower-Flat)</label>
+    <select id="namePick"></select>
+
+    <div class="checkRow">
+      <input id="markCorrected" type="checkbox" />
+      <label for="markCorrected" style="margin:0;font-weight:800;">Mark corrected (save to Corrections sheet)</label>
+    </div>
+    <small class="muted">This logs your chosen name in “Corrections” for later cleanup in Residents.</small>
+  </div>
 
   <label>Phone (WhatsApp)</label>
   <input id="phone" placeholder="Example: 91XXXXXXXXXX" />
 
   <label>Amount (₹)</label>
-  <input id="amount" type="number" min="1" />
+  <input id="amount" type="number" min="1" placeholder="e.g. 500" />
 
   <label>Method</label>
   <select id="method">
@@ -51,17 +93,18 @@
   </select>
 
   <label>UPI Txn Ref (optional)</label>
-  <input id="txnRef" />
+  <input id="txnRef" placeholder="Reference number" />
 
   <label>Collector</label>
-  <input id="collector" />
+  <input id="collector" placeholder="Name" />
 
   <label>Notes</label>
-  <input id="notes" />
+  <input id="notes" placeholder="Any note" />
 
   <button id="submit">Save Collection</button>
   <p id="msg"></p>
 
+  <!-- Receipt / WhatsApp / PDF -->
   <div id="receiptBox" class="receiptBox">
     <b>Receipt Generated</b>
     <div class="muted" id="receiptMeta" style="margin-top:6px;"></div>
@@ -73,16 +116,13 @@
       <button id="copyReceipt" class="secondary" type="button">Copy Receipt</button>
     </div>
 
-    <small class="muted">WhatsApp opens with the message ready (manual send).</small>
+    <small class="muted">WhatsApp opens with message ready (manual send).</small>
   </div>
 </div>
 
 <script>
+  // ===== CONFIG =====
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
-
-  // UPI (optional usage in your other UI if needed later)
-  const UPI_ID = "yourupi@bank";
-  const PAYEE_NAME = "Taraweeh Fund";
 
   const RECEIPT_FUND_NAME = "Taraweeh 2026";
   const RECEIPT_MESSAGE =
@@ -91,13 +131,15 @@ Thank you for your contribution for Taraweeh 2026
 
 Regards,
 Akram Khan
-Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103
+Your brother from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103
 Mob: 9958277484`;
+  // ==================
 
+  // data
   let residents = [];
-  let lastReceiptText = "";
-  let lastReceiptNo = "";
+  const dupMap = new Map(); // key => {count, names[]}
 
+  // elements
   const towerEl = document.getElementById("tower");
   const flatEl = document.getElementById("flat");
   const nameEl = document.getElementById("name");
@@ -110,50 +152,120 @@ Mob: 9958277484`;
   const submitBtn = document.getElementById("submit");
   const msgEl = document.getElementById("msg");
 
+  const dupWarnEl = document.getElementById("dupWarn");
+  const dupPickWrap = document.getElementById("dupPick");
+  const namePickEl = document.getElementById("namePick");
+  const markCorrectedEl = document.getElementById("markCorrected");
+
   const receiptBox = document.getElementById("receiptBox");
-  const receiptPreview = document.getElementById("receiptPreview");
   const receiptMeta = document.getElementById("receiptMeta");
+  const receiptPreview = document.getElementById("receiptPreview");
   const waSend = document.getElementById("waSend");
-  const copyReceiptBtn = document.getElementById("copyReceipt");
   const downloadPdfBtn = document.getElementById("downloadPdf");
+  const copyReceiptBtn = document.getElementById("copyReceipt");
 
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
     msgEl.textContent = text;
   }
 
+  function unique(arr){ return [...new Set(arr)]; }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
   function normalizePhoneForWa(phone) {
     return String(phone || "").replace(/\D/g, "");
   }
 
-  async function loadResidents() {
-    const r = await fetch(`${GAS_URL}?action=residents`, { cache: "no-store" });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || "Failed to load residents");
+  async function loadDuplicates() {
+    const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
+    const data = await res.json();
+    if (!data.ok) return;
 
-    residents = d.residents || [];
-    const towers = [...new Set(residents.map(x => x.tower))].sort((a,b)=> (Number(a)||0)-(Number(b)||0));
+    const dups = data.duplicates || [];
+    dupMap.clear();
+    dups.forEach(d => {
+      dupMap.set(String(d.key), { count: Number(d.count || 0), names: d.names || [] });
+    });
+  }
+
+  async function loadResidents() {
+    const res = await fetch(`${GAS_URL}?action=residents`, { cache: "no-store" });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to load residents");
+    residents = data.residents || [];
+    if (!residents.length) throw new Error("No residents found");
+
+    const towers = unique(residents.map(r => r.tower))
+      .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
+
     towerEl.innerHTML = towers.map(t => `<option value="${t}">${t}</option>`).join("");
     populateFlats();
   }
 
   function populateFlats() {
     const t = towerEl.value;
-    const flats = residents.filter(r => r.tower === t).map(r => r.flat).sort((a,b)=> (Number(a)||0)-(Number(b)||0));
+    const flats = residents.filter(r => r.tower === t).map(r => r.flat)
+      .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
     flatEl.innerHTML = flats.map(f => `<option value="${f}">${f}</option>`).join("");
-    fillNamePhone();
+    updateNamePhoneDupUI();
+  }
+
+  function updateNamePhoneDupUI() {
+    const tower = towerEl.value;
+    const flat = flatEl.value;
+    const key = `${tower}-${flat}`;
+
+    // pick first resident match for autofill
+    const first = residents.find(r => r.tower === tower && r.flat === flat);
+    const autoName = first ? (first.name || "") : "";
+    const autoPhone = first ? (first.phone || "") : "";
+
+    nameEl.value = autoName;
+    if (autoPhone) phoneEl.value = autoPhone;
+
+    // duplicate logic
+    const d = dupMap.get(key);
+    if (d && d.count > 1) {
+      const names = (d.names || []).filter(Boolean);
+
+      dupWarnEl.style.display = "block";
+      dupWarnEl.innerHTML =
+        `⚠ Duplicate in Residents for <b>${key}</b> (Count: ${d.count}).` +
+        `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>`;
+
+      dupPickWrap.style.display = "block";
+      markCorrectedEl.checked = false;
+
+      // options: autoName first, then duplicates
+      const options = unique([autoName, ...names].filter(Boolean));
+      namePickEl.innerHTML = options.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+
+      if (autoName && options.includes(autoName)) namePickEl.value = autoName;
+      nameEl.value = namePickEl.value;
+    } else {
+      dupWarnEl.style.display = "none";
+      dupWarnEl.textContent = "";
+      dupPickWrap.style.display = "none";
+      namePickEl.innerHTML = "";
+      markCorrectedEl.checked = false;
+      nameEl.value = autoName;
+    }
+
+    // hide old receipt when changing flat
     receiptBox.style.display = "none";
   }
 
-  function fillNamePhone() {
-    const t = towerEl.value;
-    const f = flatEl.value;
-    const r = residents.find(x => x.tower === t && x.flat === f);
-    if (r) {
-      nameEl.value = r.name || "";
-      if (r.phone) phoneEl.value = r.phone;
-    }
-  }
+  namePickEl.addEventListener("change", () => {
+    nameEl.value = namePickEl.value;
+  });
 
   function buildReceiptText({ receiptNo, tower, flat, name, amount, method, txnRef }) {
     const when = new Date().toLocaleString();
@@ -173,6 +285,31 @@ Mob: 9958277484`;
     ].join("\n");
   }
 
+  function downloadReceiptPdf(receiptNo, receiptText) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    const margin = 40;
+    let y = 52;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Payment Receipt", margin, y);
+    y += 22;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Receipt No: ${receiptNo}`, margin, y);
+    y += 18;
+
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(receiptText, 515);
+    doc.text(lines, margin, y);
+
+    const safeNo = String(receiptNo || "receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
+    doc.save(`${safeNo}.pdf`);
+  }
+
   function showReceipt(payload, receiptNo) {
     const receiptText = buildReceiptText({
       receiptNo,
@@ -183,9 +320,6 @@ Mob: 9958277484`;
       method: payload.method,
       txnRef: payload.txnRef
     });
-
-    lastReceiptText = receiptText;
-    lastReceiptNo = receiptNo;
 
     receiptMeta.textContent = `Receipt No: ${receiptNo}`;
     receiptPreview.textContent = receiptText;
@@ -207,34 +341,40 @@ Mob: 9958277484`;
     receiptBox.style.display = "block";
   }
 
-  function downloadReceiptPdf(receiptNo, receiptText) {
-    // jsPDF in UMD: window.jspdf.jsPDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+  async function saveCorrectionIfNeeded() {
+    if (dupPickWrap.style.display !== "block") return;
+    if (!markCorrectedEl.checked) return;
 
-    const margin = 40;
-    let y = 50;
+    const tower = towerEl.value;
+    const flat = flatEl.value;
+    const key = `${tower}-${flat}`;
+    const selectedName = nameEl.value;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("Payment Receipt", margin, y);
-    y += 22;
+    const d = dupMap.get(key);
+    const namesFound = d ? (d.names || []).join(" | ") : "";
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Receipt No: ${receiptNo}`, margin, y);
-    y += 18;
+    const payload = {
+      action: "saveCorrection",
+      tower,
+      flat,
+      selectedName,
+      namesFound,
+      collector: collectorEl.value,
+      notes: notesEl.value
+    };
 
-    // Body text (wrapped)
-    const body = receiptText;
-    const lines = doc.splitTextToSize(body, 515); // roughly A4 width minus margins
+    const resp = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
 
-    y += 8;
-    doc.setFontSize(10);
-    doc.text(lines, margin, y);
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error("Correction save returned non-JSON: " + text.slice(0,150)); }
 
-    const safeNo = String(receiptNo || "receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
-    doc.save(`${safeNo}.pdf`);
+    if (!data.ok) throw new Error(data.error || "Failed to save correction");
   }
 
   async function saveCollection() {
@@ -242,7 +382,7 @@ Mob: 9958277484`;
       action: "addCollection",
       tower: towerEl.value,
       flat: flatEl.value,
-      name: nameEl.value,
+      name: nameEl.value, // selected from dropdown if duplicate
       amount: Number(amountEl.value),
       method: methodEl.value,
       txnRef: txnRefEl.value,
@@ -251,7 +391,7 @@ Mob: 9958277484`;
     };
 
     if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
-    if (!payload.name) throw new Error("Name is empty");
+    if (!payload.name) throw new Error("Name is empty. Select/confirm name.");
 
     const resp = await fetch(GAS_URL, {
       method: "POST",
@@ -278,13 +418,16 @@ Mob: 9958277484`;
 
     try {
       const { payload, receiptNo } = await saveCollection();
-      setMsg("Saved ✅", true);
+      await saveCorrectionIfNeeded();
+
+      setMsg(markCorrectedEl.checked ? "Saved ✅ + Correction noted 📝" : "Saved ✅", true);
       showReceipt(payload, receiptNo);
 
-      // clear only entry fields (keep phone/collector for convenience)
+      // clear entry fields (keep phone/collector for convenience)
       amountEl.value = "";
       txnRefEl.value = "";
       notesEl.value = "";
+      markCorrectedEl.checked = false;
     } catch (e) {
       setMsg(String(e.message || e), false);
     }
@@ -294,9 +437,18 @@ Mob: 9958277484`;
   });
 
   towerEl.addEventListener("change", populateFlats);
-  flatEl.addEventListener("change", fillNamePhone);
+  flatEl.addEventListener("change", updateNamePhoneDupUI);
 
-  loadResidents().catch(err => setMsg(err.message || err, false));
+  // init
+  (async function init() {
+    try {
+      await loadDuplicates();   // duplicates first
+      await loadResidents();    // then residents
+      updateNamePhoneDupUI();
+    } catch (e) {
+      setMsg(String(e.message || e), false);
+    }
+  })();
 </script>
 
 </body>
