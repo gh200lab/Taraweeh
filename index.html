@@ -156,11 +156,11 @@
 
     if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
 
-    const resp = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+const resp = await fetch(GAS_URL, {
+  method: "POST",
+  headers: { "Content-Type": "text/plain;charset=utf-8" },
+  body: JSON.stringify(payload)
+});
 
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error || "Save failed");
