@@ -1,185 +1,125 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Collection Dashboard</title>
-  <style>
-    body { font-family: system-ui, Arial; max-width: 980px; margin: 24px auto; padding: 0 12px; }
-    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .card { border: 1px solid #ddd; border-radius: 14px; padding: 14px; }
-    h1 { margin-bottom: 6px; }
-    .big { font-size: 22px; font-weight: 900; }
-    .muted { color:#666; }
-    table { width:100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align:left; vertical-align: top; }
-    input { width:100%; padding:10px; border:1px solid #ccc; border-radius:12px; margin-top:8px; }
-    button { padding:10px 12px; border-radius:12px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    .barWrap { height: 14px; border-radius: 999px; background:#eee; overflow:hidden; margin-top:8px; }
-    .bar { height: 14px; width: 0%; background:#111; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Collection Dashboard</title>
+
+<style>
+body{font-family:system-ui,Arial;max-width:1000px;margin:24px auto;padding:0 12px}
+.card{border:1px solid #ddd;border-radius:14px;padding:16px;margin-top:14px}
+h1{margin-bottom:6px}
+.big{font-size:22px;font-weight:900}
+.muted{color:#666}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+button{padding:10px 12px;border-radius:12px;border:1px solid #ddd;background:#fff;cursor:pointer}
+.barWrap{height:14px;border-radius:999px;background:#eee;overflow:hidden;margin-top:8px}
+.bar{height:14px;width:0%;background:#111}
+</style>
 </head>
 <body>
-  <h1>Dashboard</h1>
-  <p><a href="./index.html">Back to Entry</a></p>
 
-  <div class="card">
-    <div class="muted">Progress to Target</div>
-    <div class="barWrap"><div class="bar" id="bar"></div></div>
-    <div class="muted" id="barText" style="margin-top:6px;">—</div>
-  </div>
+<h1>Dashboard</h1>
+<p><a href="./index.html">Back to Entry</a></p>
 
-  <div class="grid" style="margin-top:12px;">
-    <div class="card"><div class="muted">Target</div><div class="big" id="target">—</div></div>
-    <div class="card"><div class="muted">Total Collected</div><div class="big" id="total">—</div><div class="muted" id="progress">—</div></div>
-    <div class="card"><div class="muted">Remaining</div><div class="big" id="remaining">—</div></div>
-    <div class="card"><div class="muted">UPI Total</div><div class="big" id="upi">—</div></div>
-    <div class="card"><div class="muted">Cash Total</div><div class="big" id="cash">—</div></div>
-    <div class="card"><div class="muted">Paid Flats</div><div class="big" id="paid">—</div><div class="muted" id="paidPct">—</div></div>
-    <div class="card"><div class="muted">Unpaid Flats (Defaulters)</div><div class="big" id="unpaid">—</div></div>
-    <div class="card" style="grid-column: span 2;"><div class="muted">Highest Contribution</div><div class="big" id="highest">—</div></div>
-  </div>
+<div class="card">
+<div class="muted">Progress to Target</div>
+<div class="barWrap"><div class="bar" id="bar"></div></div>
+<div class="muted" id="barText" style="margin-top:6px;">—</div>
+</div>
 
-  <div class="card" style="margin-top:12px;">
-    <h3 style="margin:0 0 6px;">Top Contributors</h3>
-    <div class="actions"><button id="exportTop">Export Top CSV</button></div>
-    <table>
-      <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th><th>Total (₹)</th></tr></thead>
-      <tbody id="topBody"></tbody>
-    </table>
-  </div>
+<!-- DUPLICATES SECTION -->
+<div class="card">
+<h3>Residents Duplicates (Tower-Flat)</h3>
+<div id="dupSummary" class="muted">Loading...</div>
 
-  <div class="card" style="margin-top:12px;">
-    <h3 style="margin:0 0 6px;">Defaulters (Unpaid)</h3>
-    <div class="actions"><button id="exportDef">Export Defaulters CSV</button></div>
-    <input id="defSearch" placeholder="Search by tower/flat/name..." />
-    <table>
-      <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th></tr></thead>
-      <tbody id="defBody"></tbody>
-    </table>
-  </div>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Tower-Flat</th>
+<th>Count</th>
+<th>Names Found</th>
+</tr>
+</thead>
+<tbody id="dupBody"></tbody>
+</table>
+</div>
 
-  <div class="card" style="margin-top:12px;">
-    <h3 style="margin:0 0 6px;">Recent Transactions (with ReceiptNo)</h3>
-    <div class="actions"><button id="exportRecent">Export Recent CSV</button></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>ReceiptNo</th>
-          <th>Tower-Flat</th>
-          <th>Name</th>
-          <th>Method</th>
-          <th>Amount (₹)</th>
-        </tr>
-      </thead>
-      <tbody id="recentBody"></tbody>
-    </table>
-  </div>
+<!-- RECENT TRANSACTIONS -->
+<div class="card">
+<h3>Recent Transactions</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>ReceiptNo</th>
+<th>Tower-Flat</th>
+<th>Name</th>
+<th>Method</th>
+<th>Amount (₹)</th>
+</tr>
+</thead>
+<tbody id="recentBody"></tbody>
+</table>
+</div>
 
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
-  const fmt = n => "₹" + (Number(n)||0).toLocaleString("en-IN");
+const GAS_URL="https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
+const fmt=n=>"₹"+(Number(n)||0).toLocaleString("en-IN");
 
-  let defaultersAll = [], topAll = [], recentAll = [];
+async function loadStats(){
+const res=await fetch(GAS_URL+"?action=stats",{cache:"no-store"});
+const data=await res.json();
+if(!data.ok) throw new Error(data.error||"Failed");
 
-  function downloadCSV(filename, rows) {
-    const csv = rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-  }
 
-  function renderDef(list) {
-    document.getElementById("defBody").innerHTML = list.map((x,i)=>`
-      <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td></tr>
-    `).join("");
-  }
+// ===== DUPLICATES RENDERING (THIS WAS MISSING) =====
+const duplicates=data.duplicates||[];
+const dupSummary=document.getElementById("dupSummary");
+const dupBody=document.getElementById("dupBody");
 
-  async function loadStats() {
-    const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "Failed to load stats");
+if(duplicates.length===0){
+dupSummary.textContent="No duplicates found ✅";
+dupBody.innerHTML=`<tr><td colspan="4" class="muted">No duplicate Tower-Flat entries</td></tr>`;
+}else{
+dupSummary.textContent=`Duplicates found: ${duplicates.length}`;
+dupBody.innerHTML=duplicates.map((d,i)=>`
+<tr>
+<td>${i+1}</td>
+<td>${d.key}</td>
+<td>${d.count}</td>
+<td>${(d.names||[]).join(", ")}</td>
+</tr>
+`).join("");
+}
 
-    document.getElementById("target").textContent = fmt(data.target);
-    document.getElementById("total").textContent = fmt(data.total);
-    document.getElementById("remaining").textContent = fmt(data.remaining);
-    document.getElementById("upi").textContent = fmt(data.upi);
-    document.getElementById("cash").textContent = fmt(data.cash);
 
-    document.getElementById("progress").textContent = `${data.progressPct}% • Remaining ${fmt(data.remaining)}`;
-    const pct = Math.max(0, Math.min(100, Number(data.progressPct || 0)));
-    document.getElementById("bar").style.width = pct + "%";
-    document.getElementById("barText").textContent = `Collected ${fmt(data.total)} / ${fmt(data.target)} (${pct}%)`;
+// ===== PROGRESS BAR =====
+const pct=Math.max(0,Math.min(100,Number(data.progressPct||0)));
+document.getElementById("bar").style.width=pct+"%";
+document.getElementById("barText").textContent=
+`Collected ${fmt(data.total)} / ${fmt(data.target)} (${pct}%)`;
 
-    const highest = data.highest || { key:"", name:"", total:0 };
-    document.getElementById("highest").textContent = `${highest.name || "-"} (${highest.key || "-"}) — ${fmt(highest.total || 0)}`;
 
-    document.getElementById("paid").textContent = `${data.paidCount} / ${data.residentsCount}`;
-    const paidPct = data.residentsCount ? Math.round((data.paidCount / data.residentsCount) * 1000) / 10 : 0;
-    document.getElementById("paidPct").textContent = `${paidPct}% flats contributed`;
-    document.getElementById("unpaid").textContent = `${data.unpaidCount}`;
+// ===== RECENT TRANSACTIONS =====
+const recent=data.recent||[];
+document.getElementById("recentBody").innerHTML=recent.map(r=>`
+<tr>
+<td>${new Date(r.timestamp).toLocaleString()}</td>
+<td>${r.receiptNo||""}</td>
+<td>${r.tower}-${r.flat}</td>
+<td>${r.name}</td>
+<td>${r.method}</td>
+<td>${fmt(r.amount)}</td>
+</tr>
+`).join("");
+}
 
-    topAll = data.topContributors || [];
-    document.getElementById("topBody").innerHTML = topAll.map((x,i)=>`
-      <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td><td>${fmt(x.total)}</td></tr>
-    `).join("");
-
-    defaultersAll = data.defaulters || [];
-    renderDef(defaultersAll);
-
-    // ✅ Recent includes receiptNo now
-    recentAll = data.recent || [];
-    document.getElementById("recentBody").innerHTML = recentAll.map(x => `
-      <tr>
-        <td>${new Date(x.timestamp).toLocaleString()}</td>
-        <td>${x.receiptNo || ""}</td>
-        <td>${x.tower}-${x.flat}</td>
-        <td>${x.name}</td>
-        <td>${x.method}</td>
-        <td>${fmt(x.amount)}</td>
-      </tr>
-    `).join("");
-  }
-
-  document.getElementById("defSearch").addEventListener("input", () => {
-    const q = document.getElementById("defSearch").value.trim().toLowerCase();
-    const filtered = defaultersAll.filter(x =>
-      (x.key || "").toLowerCase().includes(q) || (x.name || "").toLowerCase().includes(q)
-    );
-    renderDef(filtered);
-  });
-
-  document.getElementById("exportDef").addEventListener("click", () => {
-    downloadCSV("defaulters.csv", [["Tower-Flat","Name"], ...defaultersAll.map(x => [x.key, x.name || ""])]);
-  });
-
-  document.getElementById("exportTop").addEventListener("click", () => {
-    downloadCSV("top_contributors.csv", [["Tower-Flat","Name","Total"], ...topAll.map(x => [x.key, x.name || "", x.total])]);
-  });
-
-  // ✅ Export includes ReceiptNo column
-  document.getElementById("exportRecent").addEventListener("click", () => {
-    downloadCSV("recent_transactions.csv",
-      [["Timestamp","ReceiptNo","Tower-Flat","Name","Method","Amount"],
-       ...recentAll.map(x => [
-         new Date(x.timestamp).toISOString(),
-         x.receiptNo || "",
-         `${x.tower}-${x.flat}`,
-         x.name,
-         x.method,
-         x.amount
-       ])]
-    );
-  });
-
-  loadStats().catch(err => alert(err.message || err));
-  setInterval(() => loadStats().catch(()=>{}), 30000);
+loadStats().catch(e=>alert(e.message||e));
+setInterval(()=>loadStats().catch(()=>{}),30000);
 </script>
+
 </body>
 </html>
