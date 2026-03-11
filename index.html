@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Residents Collection</title>
+  <title>Taraweeh 2026 Collection</title>
   <style>
     body { font-family: system-ui, Arial; max-width: 860px; margin: 24px auto; padding: 0 12px; }
     .card { border: 1px solid #ddd; border-radius: 14px; padding: 16px; margin-top: 12px; }
@@ -12,257 +12,246 @@
     button { margin-top: 14px; padding: 12px 14px; border: 0; border-radius: 12px; cursor:pointer; background:#111; color:#fff; }
     button.secondary { background:#eee; color:#111; border:1px solid #ddd; }
     button:disabled { opacity: .6; cursor:not-allowed; }
-    .row { display:flex; gap: 12px; }
-    .row > div { flex:1; }
     .ok { color: #0a7; font-weight: 800; }
     .err { color: #c00; font-weight: 800; }
-    small, .muted { color: #666; }
+    .receiptBox { display:none; margin-top:12px; padding:12px; border:1px solid #ddd; border-radius:14px; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
     a.btn { background:#111; color:#fff; text-decoration:none; padding:10px 12px; border-radius:12px; display:inline-block; }
-
-    .warnBox{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid #f3d36b;
-      background:#fff7d6;
-      color:#6b4e00;
-      display:none;
-      font-weight:700;
-    }
-    .warnBox small{ display:block; font-weight:600; margin-top:6px; color:#6b4e00; }
-
-    .dupPick { display:none; margin-top:10px; }
-    .dupPick label { margin-top:0; }
-
-    .checkRow { display:flex; align-items:center; gap:10px; margin-top:10px; }
-    .checkRow input { width:auto; margin:0; }
-    @media (max-width: 760px) { .row { flex-direction: column; } }
+    .muted { color:#666; }
   </style>
+
+  <!-- jsPDF for PDF receipts -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <h1>Collection Entry</h1>
-  <p><a href="./dashboard.html">Open Dashboard</a></p>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>Tower</label>
-        <select id="tower"></select>
-      </div>
-      <div>
-        <label>Flat</label>
-        <select id="flat"></select>
-      </div>
+<h1>Taraweeh 2026 Collection</h1>
+<p><a href="./dashboard.html">Open Dashboard</a></p>
+
+<div class="card">
+  <label>Tower</label>
+  <select id="tower"></select>
+
+  <label>Flat</label>
+  <select id="flat"></select>
+
+  <label>Name</label>
+  <input id="name" readonly />
+
+  <label>Phone (WhatsApp)</label>
+  <input id="phone" placeholder="Example: 91XXXXXXXXXX" />
+
+  <label>Amount (₹)</label>
+  <input id="amount" type="number" min="1" />
+
+  <label>Method</label>
+  <select id="method">
+    <option value="UPI">UPI</option>
+    <option value="Cash">Cash</option>
+  </select>
+
+  <label>UPI Txn Ref (optional)</label>
+  <input id="txnRef" />
+
+  <label>Collector</label>
+  <input id="collector" />
+
+  <label>Notes</label>
+  <input id="notes" />
+
+  <button id="submit">Save Collection</button>
+  <p id="msg"></p>
+
+  <div id="receiptBox" class="receiptBox">
+    <b>Receipt Generated</b>
+    <div class="muted" id="receiptMeta" style="margin-top:6px;"></div>
+    <pre id="receiptPreview" style="white-space:pre-wrap;margin-top:8px;margin-bottom:0;"></pre>
+
+    <div class="actions">
+      <a id="waSend" class="btn" href="#" target="_blank" rel="noopener">Send WhatsApp Receipt</a>
+      <button id="downloadPdf" class="secondary" type="button">Download PDF</button>
+      <button id="copyReceipt" class="secondary" type="button">Copy Receipt</button>
     </div>
 
-    <label>Name</label>
-    <input id="name" placeholder="Auto-filled" readonly />
-
-    <!-- Duplicate warning -->
-    <div id="dupWarn" class="warnBox"></div>
-
-    <!-- Choose correct name when duplicate -->
-    <div id="dupPick" class="dupPick">
-      <label>Choose Correct Name (for this Tower-Flat)</label>
-      <select id="namePick"></select>
-
-      <div class="checkRow">
-        <input id="markCorrected" type="checkbox" />
-        <label for="markCorrected" style="margin:0;font-weight:800;">Mark corrected (save to Corrections sheet)</label>
-      </div>
-      <small class="muted">This will store your chosen name in “Corrections” so you can fix Residents later.</small>
-    </div>
-
-    <label>Amount (₹)</label>
-    <input id="amount" type="number" min="1" placeholder="e.g. 500" />
-
-    <label>Method</label>
-    <select id="method">
-      <option value="UPI">UPI</option>
-      <option value="Cash">Cash</option>
-    </select>
-
-    <label>UPI Txn Ref (optional)</label>
-    <input id="txnRef" placeholder="Reference number" />
-
-    <label>Collector (optional)</label>
-    <input id="collector" placeholder="Name" />
-
-    <label>Notes (optional)</label>
-    <input id="notes" placeholder="Any note" />
-
-    <button id="submit">Save Collection</button>
-    <p id="msg"></p>
-    <small>Tip: If duplicate warning shows, pick correct name and tick “Mark corrected”.</small>
+    <small class="muted">WhatsApp opens with the message ready (manual send).</small>
   </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 6px;">Pay via UPI</h3>
-    <div class="row">
-      <div style="flex:0 0 180px;">
-        <img id="qr" alt="UPI QR" style="width:180px;height:180px;border:1px solid #ddd;border-radius:14px;" />
-      </div>
-      <div>
-        <div><b>UPI ID:</b> <span id="upiIdTxt"></span></div>
-        <div class="muted" style="margin-top:6px;">Scan QR or use shortcuts (mobile)</div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-          <a id="btnUPI" class="btn" href="#">Open UPI</a>
-          <a id="btnGPay" class="btn" href="#">Google Pay</a>
-          <a id="btnPhonePe" class="btn" href="#">PhonePe</a>
-          <a id="btnPaytm" class="btn" href="#">Paytm</a>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-          <button id="copyUpi" class="secondary" type="button">Copy UPI ID</button>
-          <button id="copyLink" class="secondary" type="button">Copy UPI Link</button>
-        </div>
-
-        <small class="muted">Note: App shortcuts depend on phone/browser. “Open UPI” is most reliable.</small>
-      </div>
-    </div>
-  </div>
+</div>
 
 <script>
-  // ========= CONFIG =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
 
-  const UPI_ID = "yourupi@bank";      // <-- change
-  const PAYEE_NAME = "Taraweeh Fund"; // <-- change
-  // ==========================
+  // UPI (optional usage in your other UI if needed later)
+  const UPI_ID = "yourupi@bank";
+  const PAYEE_NAME = "Taraweeh Fund";
+
+  const RECEIPT_FUND_NAME = "Taraweeh 2026";
+  const RECEIPT_MESSAGE =
+`JazakAllah Khair (جزاك اللهُ خيراً)
+Thank you for your contribution for Taraweeh 2026
+
+Regards,
+Akram Khan
+Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103
+Mob: 9958277484`;
 
   let residents = [];
-  const dupMap = new Map(); // key -> {count, names[]}
+  let lastReceiptText = "";
+  let lastReceiptNo = "";
 
   const towerEl = document.getElementById("tower");
   const flatEl = document.getElementById("flat");
   const nameEl = document.getElementById("name");
-  const msgEl = document.getElementById("msg");
-  const amtEl = document.getElementById("amount");
+  const phoneEl = document.getElementById("phone");
+  const amountEl = document.getElementById("amount");
+  const methodEl = document.getElementById("method");
+  const txnRefEl = document.getElementById("txnRef");
+  const collectorEl = document.getElementById("collector");
+  const notesEl = document.getElementById("notes");
   const submitBtn = document.getElementById("submit");
+  const msgEl = document.getElementById("msg");
 
-  const dupWarnEl = document.getElementById("dupWarn");
-  const dupPickWrap = document.getElementById("dupPick");
-  const namePickEl = document.getElementById("namePick");
-  const markCorrectedEl = document.getElementById("markCorrected");
+  const receiptBox = document.getElementById("receiptBox");
+  const receiptPreview = document.getElementById("receiptPreview");
+  const receiptMeta = document.getElementById("receiptMeta");
+  const waSend = document.getElementById("waSend");
+  const copyReceiptBtn = document.getElementById("copyReceipt");
+  const downloadPdfBtn = document.getElementById("downloadPdf");
 
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
     msgEl.textContent = text;
   }
 
-  function unique(arr) { return [...new Set(arr)]; }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  function normalizePhoneForWa(phone) {
+    return String(phone || "").replace(/\D/g, "");
   }
 
-  function populateTowers() {
-    const towers = unique(residents.map(r => r.tower))
-      .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
+  async function loadResidents() {
+    const r = await fetch(`${GAS_URL}?action=residents`, { cache: "no-store" });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "Failed to load residents");
+
+    residents = d.residents || [];
+    const towers = [...new Set(residents.map(x => x.tower))].sort((a,b)=> (Number(a)||0)-(Number(b)||0));
     towerEl.innerHTML = towers.map(t => `<option value="${t}">${t}</option>`).join("");
     populateFlats();
   }
 
   function populateFlats() {
     const t = towerEl.value;
-    const flats = residents.filter(r => r.tower === t).map(r => r.flat)
-      .sort((a,b)=> (Number(a)||0) - (Number(b)||0));
+    const flats = residents.filter(r => r.tower === t).map(r => r.flat).sort((a,b)=> (Number(a)||0)-(Number(b)||0));
     flatEl.innerHTML = flats.map(f => `<option value="${f}">${f}</option>`).join("");
-    updateNameAndDuplicateUI();
+    fillNamePhone();
+    receiptBox.style.display = "none";
   }
 
-  function updateNameAndDuplicateUI() {
+  function fillNamePhone() {
     const t = towerEl.value;
     const f = flatEl.value;
-    const key = `${t}-${f}`;
-
-    // Auto-fill name (first match)
     const r = residents.find(x => x.tower === t && x.flat === f);
-    const autoName = r ? r.name : "";
-    nameEl.value = autoName;
-
-    const d = dupMap.get(key);
-
-    if (d && d.count > 1) {
-      const names = (d.names || []).filter(Boolean);
-
-      dupWarnEl.style.display = "block";
-      dupWarnEl.innerHTML =
-        `⚠ Duplicate in Residents for <b>${key}</b> (Count: ${d.count}).` +
-        `<small>Names found: ${names.length ? names.join(", ") : "-"}</small>`;
-
-      dupPickWrap.style.display = "block";
-      markCorrectedEl.checked = false;
-
-      const options = unique([autoName, ...names].filter(Boolean));
-      namePickEl.innerHTML = options.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
-
-      if (autoName && options.includes(autoName)) namePickEl.value = autoName;
-      nameEl.value = namePickEl.value;
-
-    } else {
-      dupWarnEl.style.display = "none";
-      dupWarnEl.textContent = "";
-      dupPickWrap.style.display = "none";
-      namePickEl.innerHTML = "";
-      markCorrectedEl.checked = false;
-      nameEl.value = autoName;
+    if (r) {
+      nameEl.value = r.name || "";
+      if (r.phone) phoneEl.value = r.phone;
     }
   }
 
-  namePickEl.addEventListener("change", () => {
-    nameEl.value = namePickEl.value;
-  });
+  function buildReceiptText({ receiptNo, tower, flat, name, amount, method, txnRef }) {
+    const when = new Date().toLocaleString();
+    const amt = `₹${Number(amount||0).toLocaleString("en-IN")}`;
+    const ref = txnRef ? ` (Ref: ${txnRef})` : "";
 
-  async function loadResidents() {
-    const res = await fetch(`${GAS_URL}?action=residents`, { cache: "no-store" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "Failed to load residents");
-    residents = data.residents || [];
-    if (!residents.length) throw new Error("No residents found");
-    populateTowers();
+    return [
+      `🧾 Receipt: ${RECEIPT_FUND_NAME}`,
+      `Receipt No: ${receiptNo}`,
+      `Date: ${when}`,
+      `Flat: ${tower}-${flat}`,
+      `Name: ${name}`,
+      `Amount: ${amt}`,
+      `Mode: ${method}${ref}`,
+      "--------------------------------",
+      RECEIPT_MESSAGE
+    ].join("\n");
   }
 
-  async function loadDuplicates() {
-    const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
-    const data = await res.json();
-    if (!data.ok) return;
-
-    const dups = data.duplicates || [];
-    dupMap.clear();
-    dups.forEach(d => {
-      dupMap.set(String(d.key), { count: Number(d.count || 0), names: d.names || [] });
+  function showReceipt(payload, receiptNo) {
+    const receiptText = buildReceiptText({
+      receiptNo,
+      tower: payload.tower,
+      flat: payload.flat,
+      name: payload.name,
+      amount: payload.amount,
+      method: payload.method,
+      txnRef: payload.txnRef
     });
+
+    lastReceiptText = receiptText;
+    lastReceiptNo = receiptNo;
+
+    receiptMeta.textContent = `Receipt No: ${receiptNo}`;
+    receiptPreview.textContent = receiptText;
+
+    const phone = normalizePhoneForWa(phoneEl.value);
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(receiptText)}`
+      : `https://wa.me/?text=${encodeURIComponent(receiptText)}`;
+
+    waSend.href = waUrl;
+
+    copyReceiptBtn.onclick = async () => {
+      await navigator.clipboard.writeText(receiptText);
+      setMsg("Receipt copied ✅", true);
+    };
+
+    downloadPdfBtn.onclick = () => downloadReceiptPdf(receiptNo, receiptText);
+
+    receiptBox.style.display = "block";
   }
 
-  async function saveCorrectionIfNeeded() {
-    // Only when duplicate UI is visible and checkbox checked
-    if (dupPickWrap.style.display !== "block") return;
-    if (!markCorrectedEl.checked) return;
+  function downloadReceiptPdf(receiptNo, receiptText) {
+    // jsPDF in UMD: window.jspdf.jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
 
-    const tower = towerEl.value;
-    const flat = flatEl.value;
-    const key = `${tower}-${flat}`;
-    const selectedName = nameEl.value;
+    const margin = 40;
+    let y = 50;
 
-    const d = dupMap.get(key);
-    const namesFound = d ? (d.names || []).join(" | ") : "";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Payment Receipt", margin, y);
+    y += 22;
 
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Receipt No: ${receiptNo}`, margin, y);
+    y += 18;
+
+    // Body text (wrapped)
+    const body = receiptText;
+    const lines = doc.splitTextToSize(body, 515); // roughly A4 width minus margins
+
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(lines, margin, y);
+
+    const safeNo = String(receiptNo || "receipt").replace(/[^a-zA-Z0-9_-]/g, "_");
+    doc.save(`${safeNo}.pdf`);
+  }
+
+  async function saveCollection() {
     const payload = {
-      action: "saveCorrection",
-      tower,
-      flat,
-      selectedName,
-      namesFound,
-      collector: document.getElementById("collector").value,
-      notes: document.getElementById("notes").value
+      action: "addCollection",
+      tower: towerEl.value,
+      flat: flatEl.value,
+      name: nameEl.value,
+      amount: Number(amountEl.value),
+      method: methodEl.value,
+      txnRef: txnRefEl.value,
+      collector: collectorEl.value,
+      notes: notesEl.value
     };
+
+    if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
+    if (!payload.name) throw new Error("Name is empty");
 
     const resp = await fetch(GAS_URL, {
       method: "POST",
@@ -273,61 +262,29 @@
     const text = await resp.text();
     let data;
     try { data = JSON.parse(text); }
-    catch { throw new Error("Correction save returned non-JSON: " + text.slice(0, 150)); }
-    if (!data.ok) throw new Error(data.error || "Failed to save correction");
-  }
+    catch { throw new Error("Server returned non-JSON: " + text.slice(0,150)); }
 
-  async function addCollection() {
-    const payload = {
-      action: "addCollection",
-      tower: towerEl.value,
-      flat: flatEl.value,
-      name: nameEl.value,
-      amount: Number(document.getElementById("amount").value),
-      method: document.getElementById("method").value,
-      txnRef: document.getElementById("txnRef").value,
-      collector: document.getElementById("collector").value,
-      notes: document.getElementById("notes").value
-    };
-
-    if (!payload.amount || payload.amount <= 0) throw new Error("Enter a valid amount");
-    if (!payload.name) throw new Error("Name is empty. Please select/confirm the name.");
-
-    const resp = await fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // CORS-safe
-      body: JSON.stringify(payload)
-    });
-
-    const text = await resp.text();
-    let data;
-    try { data = JSON.parse(text); }
-    catch { throw new Error("Server returned non-JSON: " + text.slice(0, 150)); }
     if (!data.ok) throw new Error(data.error || "Save failed");
+    if (!data.receiptNo) throw new Error("ReceiptNo missing from server response");
 
-    // reset entry fields
-    document.getElementById("amount").value = "";
-    document.getElementById("txnRef").value = "";
-    document.getElementById("notes").value = "";
-    setUpiLinks();
+    return { payload, receiptNo: data.receiptNo };
   }
 
   submitBtn.addEventListener("click", async () => {
     submitBtn.disabled = true;
     const old = submitBtn.textContent;
     submitBtn.textContent = "Saving...";
-    setMsg("", true);
+    setMsg("");
 
     try {
-      // 1) save collection
-      await addCollection();
-      // 2) optionally save correction
-      await saveCorrectionIfNeeded();
-      setMsg(markCorrectedEl.checked ? "Saved ✅ + Correction noted 📝" : "Saved ✅", true);
+      const { payload, receiptNo } = await saveCollection();
+      setMsg("Saved ✅", true);
+      showReceipt(payload, receiptNo);
 
-      // reset corrected checkbox (for next entry)
-      markCorrectedEl.checked = false;
-
+      // clear only entry fields (keep phone/collector for convenience)
+      amountEl.value = "";
+      txnRefEl.value = "";
+      notesEl.value = "";
     } catch (e) {
       setMsg(String(e.message || e), false);
     }
@@ -337,56 +294,10 @@
   });
 
   towerEl.addEventListener("change", populateFlats);
-  flatEl.addEventListener("change", updateNameAndDuplicateUI);
+  flatEl.addEventListener("change", fillNamePhone);
 
-  // ===== UPI QR + SHORTCUTS =====
-  const qrEl = document.getElementById("qr");
-  const upiIdTxt = document.getElementById("upiIdTxt");
-  upiIdTxt.textContent = UPI_ID;
-
-  function buildUpiUri(amount) {
-    const params = new URLSearchParams({ pa: UPI_ID, pn: PAYEE_NAME, cu: "INR" });
-    if (amount && amount > 0) params.set("am", String(amount));
-    return `upi://pay?${params.toString()}`;
-  }
-
-  function setUpiLinks() {
-    const amount = Number(amtEl.value) || 0;
-    const upiUri = buildUpiUri(amount);
-
-    qrEl.src = "https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=" + encodeURIComponent(upiUri);
-
-    document.getElementById("btnUPI").href = upiUri;
-    const query = upiUri.split("?")[1] || "";
-    document.getElementById("btnGPay").href = "gpay://upi/pay?" + query;
-    document.getElementById("btnPhonePe").href = "phonepe://upi/pay?" + query;
-    document.getElementById("btnPaytm").href = "paytmmp://pay?" + query;
-  }
-
-  document.getElementById("copyUpi").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(UPI_ID);
-    setMsg("UPI ID copied ✅", true);
-  });
-
-  document.getElementById("copyLink").addEventListener("click", async () => {
-    const amount = Number(amtEl.value) || 0;
-    await navigator.clipboard.writeText(buildUpiUri(amount));
-    setMsg("UPI link copied ✅", true);
-  });
-
-  amtEl.addEventListener("input", setUpiLinks);
-
-  // Init
-  (async function init() {
-    try {
-      setUpiLinks();
-      await loadDuplicates();
-      await loadResidents();
-      updateNameAndDuplicateUI();
-    } catch (e) {
-      setMsg(String(e.message || e), false);
-    }
-  })();
+  loadResidents().catch(err => setMsg(err.message || err, false));
 </script>
+
 </body>
 </html>
