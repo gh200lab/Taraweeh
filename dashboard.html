@@ -32,80 +32,19 @@
   </div>
 
   <div class="grid" style="margin-top:12px;">
-    <div class="card">
-      <div class="muted">Target</div>
-      <div class="big" id="target">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">Total Collected</div>
-      <div class="big" id="total">—</div>
-      <div class="muted" id="progress">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">Remaining</div>
-      <div class="big" id="remaining">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">UPI Total</div>
-      <div class="big" id="upi">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">Cash Total</div>
-      <div class="big" id="cash">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">Paid Flats</div>
-      <div class="big" id="paid">—</div>
-      <div class="muted" id="paidPct">—</div>
-    </div>
-
-    <div class="card">
-      <div class="muted">Unpaid Flats (Defaulters)</div>
-      <div class="big" id="unpaid">—</div>
-    </div>
-
-    <div class="card" style="grid-column: span 2;">
-      <div class="muted">Highest Contribution</div>
-      <div class="big" id="highest">—</div>
-    </div>
-  </div>
-
-  <!-- NEW: Duplicate report -->
-  <div class="card" style="margin-top:12px;">
-    <h3 style="margin:0 0 6px;">Residents Duplicates (Tower-Flat)</h3>
-    <div class="muted" id="dupSummary">—</div>
-
-    <div class="actions">
-      <button id="exportDup">Export Duplicates CSV</button>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Tower-Flat</th>
-          <th>Count</th>
-          <th>Names Found</th>
-        </tr>
-      </thead>
-      <tbody id="dupBody"></tbody>
-    </table>
-
-    <small class="muted">
-      Fix Residents master so each Tower-Flat appears only once. This prevents wrong names during door-to-door collection.
-    </small>
+    <div class="card"><div class="muted">Target</div><div class="big" id="target">—</div></div>
+    <div class="card"><div class="muted">Total Collected</div><div class="big" id="total">—</div><div class="muted" id="progress">—</div></div>
+    <div class="card"><div class="muted">Remaining</div><div class="big" id="remaining">—</div></div>
+    <div class="card"><div class="muted">UPI Total</div><div class="big" id="upi">—</div></div>
+    <div class="card"><div class="muted">Cash Total</div><div class="big" id="cash">—</div></div>
+    <div class="card"><div class="muted">Paid Flats</div><div class="big" id="paid">—</div><div class="muted" id="paidPct">—</div></div>
+    <div class="card"><div class="muted">Unpaid Flats (Defaulters)</div><div class="big" id="unpaid">—</div></div>
+    <div class="card" style="grid-column: span 2;"><div class="muted">Highest Contribution</div><div class="big" id="highest">—</div></div>
   </div>
 
   <div class="card" style="margin-top:12px;">
     <h3 style="margin:0 0 6px;">Top Contributors</h3>
-    <div class="actions">
-      <button id="exportTop">Export Top CSV</button>
-    </div>
+    <div class="actions"><button id="exportTop">Export Top CSV</button></div>
     <table>
       <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th><th>Total (₹)</th></tr></thead>
       <tbody id="topBody"></tbody>
@@ -114,9 +53,7 @@
 
   <div class="card" style="margin-top:12px;">
     <h3 style="margin:0 0 6px;">Defaulters (Unpaid)</h3>
-    <div class="actions">
-      <button id="exportDef">Export Defaulters CSV</button>
-    </div>
+    <div class="actions"><button id="exportDef">Export Defaulters CSV</button></div>
     <input id="defSearch" placeholder="Search by tower/flat/name..." />
     <table>
       <thead><tr><th>#</th><th>Tower-Flat</th><th>Name</th></tr></thead>
@@ -125,12 +62,19 @@
   </div>
 
   <div class="card" style="margin-top:12px;">
-    <h3 style="margin:0 0 6px;">Recent Transactions</h3>
-    <div class="actions">
-      <button id="exportRecent">Export Recent CSV</button>
-    </div>
+    <h3 style="margin:0 0 6px;">Recent Transactions (with ReceiptNo)</h3>
+    <div class="actions"><button id="exportRecent">Export Recent CSV</button></div>
     <table>
-      <thead><tr><th>Date</th><th>Tower-Flat</th><th>Name</th><th>Method</th><th>Amount (₹)</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>ReceiptNo</th>
+          <th>Tower-Flat</th>
+          <th>Name</th>
+          <th>Method</th>
+          <th>Amount (₹)</th>
+        </tr>
+      </thead>
       <tbody id="recentBody"></tbody>
     </table>
   </div>
@@ -139,51 +83,21 @@
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
   const fmt = n => "₹" + (Number(n)||0).toLocaleString("en-IN");
 
-  let defaultersAll = [];
-  let topAll = [];
-  let recentAll = [];
-  let dupAll = [];
+  let defaultersAll = [], topAll = [], recentAll = [];
 
   function downloadCSV(filename, rows) {
-    const csv = rows.map(r =>
-      r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")
-    ).join("\n");
-
+    const csv = rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   }
 
   function renderDef(list) {
     document.getElementById("defBody").innerHTML = list.map((x,i)=>`
       <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td></tr>
-    `).join("");
-  }
-
-  function renderDup(list) {
-    const dupSummary = document.getElementById("dupSummary");
-    const dupBody = document.getElementById("dupBody");
-
-    if (!list.length) {
-      dupSummary.textContent = "No duplicates found ✅";
-      dupBody.innerHTML = `<tr><td colspan="4" class="muted">No duplicates</td></tr>`;
-      return;
-    }
-
-    dupSummary.textContent = `Duplicates found: ${list.length} Tower-Flat entries`;
-    dupBody.innerHTML = list.map((d,i)=>`
-      <tr>
-        <td>${i+1}</td>
-        <td>${d.key}</td>
-        <td>${d.count}</td>
-        <td>${(d.names || []).join(", ")}</td>
-      </tr>
     `).join("");
   }
 
@@ -198,61 +112,49 @@
     document.getElementById("upi").textContent = fmt(data.upi);
     document.getElementById("cash").textContent = fmt(data.cash);
 
-    document.getElementById("progress").textContent =
-      `${data.progressPct}% • Remaining ${fmt(data.remaining)}`;
-
+    document.getElementById("progress").textContent = `${data.progressPct}% • Remaining ${fmt(data.remaining)}`;
     const pct = Math.max(0, Math.min(100, Number(data.progressPct || 0)));
     document.getElementById("bar").style.width = pct + "%";
-    document.getElementById("barText").textContent =
-      `Collected ${fmt(data.total)} / ${fmt(data.target)} (${pct}%)`;
+    document.getElementById("barText").textContent = `Collected ${fmt(data.total)} / ${fmt(data.target)} (${pct}%)`;
 
     const highest = data.highest || { key:"", name:"", total:0 };
-    document.getElementById("highest").textContent =
-      `${highest.name || "-"} (${highest.key || "-"}) — ${fmt(highest.total || 0)}`;
+    document.getElementById("highest").textContent = `${highest.name || "-"} (${highest.key || "-"}) — ${fmt(highest.total || 0)}`;
 
     document.getElementById("paid").textContent = `${data.paidCount} / ${data.residentsCount}`;
     const paidPct = data.residentsCount ? Math.round((data.paidCount / data.residentsCount) * 1000) / 10 : 0;
     document.getElementById("paidPct").textContent = `${paidPct}% flats contributed`;
     document.getElementById("unpaid").textContent = `${data.unpaidCount}`;
 
-    // Top
     topAll = data.topContributors || [];
     document.getElementById("topBody").innerHTML = topAll.map((x,i)=>`
       <tr><td>${i+1}</td><td>${x.key}</td><td>${x.name || ""}</td><td>${fmt(x.total)}</td></tr>
     `).join("");
 
-    // Defaulters
     defaultersAll = data.defaulters || [];
     renderDef(defaultersAll);
 
-    // Recent
+    // ✅ Recent includes receiptNo now
     recentAll = data.recent || [];
     document.getElementById("recentBody").innerHTML = recentAll.map(x => `
       <tr>
         <td>${new Date(x.timestamp).toLocaleString()}</td>
+        <td>${x.receiptNo || ""}</td>
         <td>${x.tower}-${x.flat}</td>
         <td>${x.name}</td>
         <td>${x.method}</td>
         <td>${fmt(x.amount)}</td>
       </tr>
     `).join("");
-
-    // NEW: Duplicates
-    dupAll = data.duplicates || [];
-    renderDup(dupAll);
   }
 
-  // Search defaulters
   document.getElementById("defSearch").addEventListener("input", () => {
     const q = document.getElementById("defSearch").value.trim().toLowerCase();
     const filtered = defaultersAll.filter(x =>
-      (x.key || "").toLowerCase().includes(q) ||
-      (x.name || "").toLowerCase().includes(q)
+      (x.key || "").toLowerCase().includes(q) || (x.name || "").toLowerCase().includes(q)
     );
     renderDef(filtered);
   });
 
-  // Exports
   document.getElementById("exportDef").addEventListener("click", () => {
     downloadCSV("defaulters.csv", [["Tower-Flat","Name"], ...defaultersAll.map(x => [x.key, x.name || ""])]);
   });
@@ -261,21 +163,21 @@
     downloadCSV("top_contributors.csv", [["Tower-Flat","Name","Total"], ...topAll.map(x => [x.key, x.name || "", x.total])]);
   });
 
+  // ✅ Export includes ReceiptNo column
   document.getElementById("exportRecent").addEventListener("click", () => {
     downloadCSV("recent_transactions.csv",
-      [["Timestamp","Tower-Flat","Name","Method","Amount"],
-       ...recentAll.map(x => [new Date(x.timestamp).toISOString(), `${x.tower}-${x.flat}`, x.name, x.method, x.amount])]
+      [["Timestamp","ReceiptNo","Tower-Flat","Name","Method","Amount"],
+       ...recentAll.map(x => [
+         new Date(x.timestamp).toISOString(),
+         x.receiptNo || "",
+         `${x.tower}-${x.flat}`,
+         x.name,
+         x.method,
+         x.amount
+       ])]
     );
   });
 
-  document.getElementById("exportDup").addEventListener("click", () => {
-    downloadCSV("resident_duplicates.csv",
-      [["Tower-Flat","Count","Names Found"],
-       ...dupAll.map(d => [d.key, d.count, (d.names || []).join(" | ")])]
-    );
-  });
-
-  // Init + auto refresh
   loadStats().catch(err => alert(err.message || err));
   setInterval(() => loadStats().catch(()=>{}), 30000);
 </script>
