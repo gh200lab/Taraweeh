@@ -267,7 +267,9 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
 
     document.getElementById("btnUPI").href = upi;
     document.getElementById("btnGPay").href = "gpay://upi/pay?" + q;
-    document.getElementById("btnPhonePe").href = "phonepe://upi/pay?" + q;
+    // Best-effort PhonePe: intent link (Android Chrome)
+document.getElementById("btnPhonePe").href =
+  "intent://pay?" + q + "#Intent;scheme=upi;package=com.phonepe.app;end";
     document.getElementById("btnPaytm").href = "paytmmp://pay?" + q;
     document.getElementById("btnBHIM").href = "bhim://upi/pay?" + q;
     document.getElementById("btnAmazon").href = "amazonpay://upi/pay?" + q;
