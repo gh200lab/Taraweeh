@@ -39,7 +39,20 @@
     .receiptBox { display:none; margin-top:12px; padding:12px; border:1px solid #ddd; border-radius:14px; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
 
-    @media (max-width: 760px) { .row { flex-direction: column; } }
+    /* UPI styles */
+    .upiGrid { display:grid; grid-template-columns: 220px 1fr; gap: 12px; align-items:start; }
+    .qrBox img { width:220px; height:220px; border:1px solid #ddd; border-radius:14px; object-fit:contain; background:#fff; }
+    .appBtns { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .appLink { display:inline-flex; align-items:center; gap:8px; border:1px solid #ddd; background:#fff; color:#111; text-decoration:none; padding:10px 12px; border-radius:12px; }
+    .appLogo { width:18px; height:18px; border-radius:4px; }
+    .miniBtns { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .miniBtns button { margin-top:0; }
+
+    @media (max-width: 760px) {
+      .row { flex-direction: column; }
+      .upiGrid { grid-template-columns: 1fr; }
+      .qrBox img { width: 100%; height: auto; max-width: 320px; }
+    }
   </style>
 
   <!-- jsPDF for PDF receipts -->
@@ -50,6 +63,55 @@
 <h1>Taraweeh 2026 Collection</h1>
 <p><a href="./dashboard.html">Open Dashboard</a></p>
 
+<!-- ✅ UPI Payment Card -->
+<div class="card">
+  <h3 style="margin:0 0 8px;">Pay via UPI</h3>
+
+  <div class="upiGrid">
+    <div class="qrBox">
+      <!-- OPTION A (Recommended): Dynamic QR (auto updates with amount) -->
+      <img id="qrDynamic" alt="UPI QR (Dynamic)" />
+
+      <!-- OPTION B (Optional): Your PhonePe QR Image
+           Put file at: assets/qr-phonepe.jpg
+           Uncomment next line if you want static QR instead of dynamic:
+      -->
+      <!-- <img src="./assets/qr-phonepe.jpg" alt="PhonePe QR" /> -->
+    </div>
+
+    <div>
+      <div><b>UPI ID:</b> <span id="upiIdTxt"></span></div>
+      <div class="muted" style="margin-top:6px;">Scan QR or use any app button to pay directly.</div>
+
+      <!-- App shortcuts with logos (store logos locally) -->
+      <div class="appBtns">
+        <a class="appLink" id="btnUPI" href="#"><img class="appLogo" src="./assets/apps/upi.png" alt="">Open UPI</a>
+        <a class="appLink" id="btnGPay" href="#"><img class="appLogo" src="./assets/apps/gpay.png" alt="">GPay</a>
+        <a class="appLink" id="btnPhonePe" href="#"><img class="appLogo" src="./assets/apps/phonepe.png" alt="">PhonePe</a>
+        <a class="appLink" id="btnPaytm" href="#"><img class="appLogo" src="./assets/apps/paytm.png" alt="">Paytm</a>
+        <a class="appLink" id="btnBHIM" href="#"><img class="appLogo" src="./assets/apps/bhim.png" alt="">BHIM</a>
+        <a class="appLink" id="btnAmazon" href="#"><img class="appLogo" src="./assets/apps/amazonpay.png" alt="">Amazon Pay</a>
+        <a class="appLink" id="btnWhatsAppPay" href="#"><img class="appLogo" src="./assets/apps/whatsapp.png" alt="">WhatsApp Pay</a>
+        <a class="appLink" id="btnCRED" href="#"><img class="appLogo" src="./assets/apps/cred.png" alt="">CRED</a>
+        <a class="appLink" id="btnAirtel" href="#"><img class="appLogo" src="./assets/apps/airtel.png" alt="">Airtel</a>
+        <a class="appLink" id="btnMobikwik" href="#"><img class="appLogo" src="./assets/apps/mobikwik.png" alt="">MobiKwik</a>
+        <a class="appLink" id="btnFreecharge" href="#"><img class="appLogo" src="./assets/apps/freecharge.png" alt="">Freecharge</a>
+      </div>
+
+      <div class="miniBtns">
+        <button class="secondary" id="copyUpi" type="button">Copy UPI ID</button>
+        <button class="secondary" id="copyUpiLink" type="button">Copy UPI Link</button>
+      </div>
+
+      <small class="muted">
+        Note: Not all phones support every deep-link. “Open UPI” works on most Android phones.
+        If a specific button doesn’t open, use “Open UPI” or scan QR.
+      </small>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Collection Card -->
 <div class="card">
   <div class="row">
     <div>
@@ -124,6 +186,10 @@
   // ===== CONFIG =====
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzdmoQ4-sm-hH4vJlxfNjhaJDQdKjouE4VwuAoKlimVsDCSmMPSwqiwCntXG6Kw1jw/exec";
 
+  // ✅ UPI details (UPDATED)
+  const UPI_ID = "9991554959@ybl";
+  const PAYEE_NAME = "Taraweeh 2026";
+
   const RECEIPT_FUND_NAME = "Taraweeh 2026";
   const RECEIPT_MESSAGE =
 `JazakAllah Khair (جزاك اللهُ خيراً)
@@ -162,6 +228,10 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
   const downloadPdfBtn = document.getElementById("downloadPdf");
   const copyReceiptBtn = document.getElementById("copyReceipt");
 
+  // UPI elements
+  const qrDynamicEl = document.getElementById("qrDynamic");
+  const upiIdTxtEl = document.getElementById("upiIdTxt");
+
   function setMsg(text, ok=true) {
     msgEl.className = ok ? "ok" : "err";
     msgEl.textContent = text;
@@ -181,6 +251,54 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
   function normalizePhoneForWa(phone) {
     return String(phone || "").replace(/\D/g, "");
   }
+
+  // ===== UPI LINKS + QR =====
+  function buildUpiUri(amount){
+    const p = new URLSearchParams({ pa: UPI_ID, pn: PAYEE_NAME, cu: "INR" });
+    if (amount && amount > 0) p.set("am", String(amount));
+    return `upi://pay?${p.toString()}`;
+  }
+
+  function setUpiUi(){
+    upiIdTxtEl.textContent = UPI_ID;
+
+    const amount = Number(amountEl.value) || 0;
+    const upi = buildUpiUri(amount);
+    const q = upi.split("?")[1] || "";
+
+    // Dynamic QR
+    qrDynamicEl.src = "https://chart.googleapis.com/chart?cht=qr&chs=360x360&chl=" + encodeURIComponent(upi);
+
+    // Universal
+    document.getElementById("btnUPI").href = upi;
+
+    // Deep-links (may vary by device/app versions)
+    document.getElementById("btnGPay").href = "gpay://upi/pay?" + q;
+    document.getElementById("btnPhonePe").href = "phonepe://upi/pay?" + q;
+    document.getElementById("btnPaytm").href = "paytmmp://pay?" + q;
+    document.getElementById("btnBHIM").href = "bhim://upi/pay?" + q;
+    document.getElementById("btnAmazon").href = "amazonpay://upi/pay?" + q;
+
+    // WhatsApp Pay: not consistent across devices; keeping a best-effort link
+    document.getElementById("btnWhatsAppPay").href = "whatsapp://send?text=" + encodeURIComponent("Pay via UPI: " + upi);
+
+    document.getElementById("btnCRED").href = "credpay://upi/pay?" + q;
+    document.getElementById("btnAirtel").href = "airtelmoney://upi/pay?" + q;
+    document.getElementById("btnMobikwik").href = "mobikwik://upi/pay?" + q;
+    document.getElementById("btnFreecharge").href = "freecharge://upi/pay?" + q;
+  }
+
+  document.getElementById("copyUpi").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(UPI_ID);
+    setMsg("UPI ID copied ✅", true);
+  });
+
+  document.getElementById("copyUpiLink").addEventListener("click", async () => {
+    const upi = buildUpiUri(Number(amountEl.value) || 0);
+    await navigator.clipboard.writeText(upi);
+    setMsg("UPI link copied ✅", true);
+  });
+  // =========================
 
   async function loadDuplicates() {
     const res = await fetch(`${GAS_URL}?action=stats`, { cache: "no-store" });
@@ -221,7 +339,6 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
     const flat = flatEl.value;
     const key = `${tower}-${flat}`;
 
-    // pick first resident match for autofill
     const first = residents.find(r => r.tower === tower && r.flat === flat);
     const autoName = first ? (first.name || "") : "";
     const autoPhone = first ? (first.phone || "") : "";
@@ -229,7 +346,6 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
     nameEl.value = autoName;
     if (autoPhone) phoneEl.value = autoPhone;
 
-    // duplicate logic
     const d = dupMap.get(key);
     if (d && d.count > 1) {
       const names = (d.names || []).filter(Boolean);
@@ -242,7 +358,6 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
       dupPickWrap.style.display = "block";
       markCorrectedEl.checked = false;
 
-      // options: autoName first, then duplicates
       const options = unique([autoName, ...names].filter(Boolean));
       namePickEl.innerHTML = options.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
@@ -257,7 +372,6 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
       nameEl.value = autoName;
     }
 
-    // hide old receipt when changing flat
     receiptBox.style.display = "none";
   }
 
@@ -380,7 +494,7 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
       action: "addCollection",
       tower: towerEl.value,
       flat: flatEl.value,
-      name: nameEl.value, // selected from dropdown if duplicate
+      name: nameEl.value,
       amount: Number(amountEl.value),
       method: methodEl.value,
       txnRef: txnRefEl.value,
@@ -426,6 +540,9 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
       txnRefEl.value = "";
       notesEl.value = "";
       markCorrectedEl.checked = false;
+
+      // refresh QR/app links after clearing amount
+      setUpiUi();
     } catch (e) {
       setMsg(String(e.message || e), false);
     }
@@ -437,11 +554,15 @@ Your brothers from Global Hillview Apartments, Sec-11, Sohna, Gurgaon-122103`;
   towerEl.addEventListener("change", populateFlats);
   flatEl.addEventListener("change", updateNamePhoneDupUI);
 
+  // Rebuild QR + app links whenever amount changes
+  amountEl.addEventListener("input", setUpiUi);
+
   // init
   (async function init() {
     try {
-      await loadDuplicates();   // duplicates first
-      await loadResidents();    // then residents
+      setUpiUi();
+      await loadDuplicates();
+      await loadResidents();
       updateNamePhoneDupUI();
     } catch (e) {
       setMsg(String(e.message || e), false);
