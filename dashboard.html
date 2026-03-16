@@ -37,6 +37,29 @@
     .bar{height:12px;width:0%;background:linear-gradient(90deg,var(--gold-dark),var(--gold),var(--gold-light));border-radius:999px;transition:width 1.2s ease;}
     .bar-text{font-size:12px;color:var(--text-muted);margin-top:8px;}
 
+    /* ─── Tower Stats ─── */
+    .tower-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:4px;}
+    .tower-row{background:rgba(0,0,0,0.2);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:14px 16px;}
+    .tower-row-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .tower-name{font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:var(--gold-light);letter-spacing:0.08em;}
+    .tower-collected{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--gold);}
+    .tower-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+    .tower-meta-item{text-align:center;background:rgba(255,255,255,0.03);border-radius:6px;padding:6px 4px;}
+    .tower-meta-label{font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;}
+    .tower-meta-val{font-size:12px;font-weight:700;color:var(--text);}
+    .tower-meta-val.green{color:#6fcf97;}
+    .tower-meta-val.red{color:#f08080;}
+    .tower-bar-wrap{height:7px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;}
+    .tower-bar{height:7px;border-radius:999px;background:linear-gradient(90deg,var(--gold-dark),var(--gold),var(--gold-light));transition:width 1s ease;}
+    .tower-bar-text{font-size:10px;color:var(--text-muted);margin-top:5px;text-align:right;}
+    .ot-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(201,168,76,0.12);}
+    .ot-cell{background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 8px;}
+    .ot-label{font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px;}
+    .ot-value{font-size:12px;font-weight:700;}
+    .ot-value.owner{color:#fbbf24;}
+    .ot-value.tenant{color:#60a5fa;}
+    .ot-sub{font-size:10px;color:var(--text-muted);margin-top:1px;}
+
     /* ─── Search + per-page row ─── */
     .table-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px;margin-bottom:12px;}
     .table-controls input{flex:1;min-width:180px;padding:9px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:var(--radius-sm);color:var(--text);font-family:'Lato',sans-serif;font-size:13px;outline:none;transition:0.2s;}
@@ -44,6 +67,10 @@
     .table-controls input::placeholder{color:rgba(160,144,112,0.6);}
     .per-page-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
     .per-page-wrap select{padding:8px 28px 8px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:var(--radius-sm);color:var(--text);font-family:'Lato',sans-serif;font-size:12px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c9a84c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+    .tower-filter{display:flex;align-items:center;gap:0;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(201,168,76,0.2);flex-shrink:0;}
+    .tower-filter .tf-label{padding:8px 10px;background:rgba(201,168,76,0.1);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-right:1px solid rgba(201,168,76,0.2);}
+    .tower-filter select{padding:8px 28px 8px 10px;background:rgba(255,255,255,0.07);border:none;border-radius:0;color:var(--text);font-family:'Lato',sans-serif;font-size:13px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c9a84c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;min-width:120px;}
+    .tower-filter select:focus{outline:none;}
 
     /* ─── Pagination ─── */
     .pagination{display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px;}
@@ -115,6 +142,38 @@
     <div class="stat-card"><div class="stat-label">Cash Total</div><div class="stat-value" id="cash">—</div></div>
     <div class="stat-card"><div class="stat-label">Defaulters</div><div class="stat-value" id="unpaid">—</div></div>
     <div class="stat-card"><div class="stat-label">Highest Contribution</div><div class="stat-value" id="highest" style="font-size:clamp(12px,2vw,15px);line-height:1.4;">—</div></div>
+    <div class="stat-card"><div class="stat-label">👑 Owner Collection</div><div class="stat-value" id="ownerTotal">—</div><div class="stat-sub" id="ownerSub">—</div></div>
+    <div class="stat-card"><div class="stat-label">🏠 Tenant Collection</div><div class="stat-value" id="tenantTotal">—</div><div class="stat-sub" id="tenantSub">—</div></div>
+    <div class="stat-card"><div class="stat-label">🚶 Walk-in Donors</div><div class="stat-value" id="walkinTotal">—</div><div class="stat-sub" id="walkinSub">—</div></div>
+  </div>
+
+  <!-- Tower-wise Stats -->
+  <div class="card">
+    <div class="card-title">Tower-wise Collection</div>
+    <div class="tower-grid" id="towerStatsGrid">
+      <div class="muted" style="font-size:13px;">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Walk-in Donors -->
+  <div class="card" id="walkinCard" style="display:none;">
+    <div class="card-title">🚶 Walk-in Donors</div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Tower / Flat</th>
+            <th>Receipt</th>
+          </tr>
+        </thead>
+        <tbody id="walkinBody"></tbody>
+      </table>
+    </div>
+    <div id="walkinFooter" style="margin-top:12px;font-size:13px;color:var(--text-muted);"></div>
   </div>
 
   <!-- Recent Transactions (paginated + searchable) -->
@@ -124,6 +183,12 @@
       <button id="exportRecent">⬇ Export CSV</button>
     </div>
     <div class="table-controls">
+      <div class="tower-filter">
+        <span class="tf-label">🏢 Tower</span>
+        <select id="recentTowerFilter">
+          <option value="">All Towers</option>
+        </select>
+      </div>
       <input id="recentSearch" placeholder="🔍  Search name, flat, receipt, method…" />
       <div class="per-page-wrap">
         <span>Show</span>
@@ -163,7 +228,13 @@
     <div class="card-title">Defaulters (Unpaid)</div>
     <div class="actions"><button id="exportDef">⬇ Export CSV</button></div>
     <div class="table-controls">
-      <input id="defSearch" placeholder="🔍  Search tower / flat / name…" />
+      <div class="tower-filter">
+        <span class="tf-label">🏢 Tower</span>
+        <select id="defTowerFilter">
+          <option value="">All Towers</option>
+        </select>
+      </div>
+      <input id="defSearch" placeholder="🔍  Search flat / name…" />
     </div>
     <div style="overflow-x:auto;">
       <table>
@@ -197,6 +268,8 @@ let recentFiltered = [];
 let defaultersAll = [];
 let recentPage = 1;
 let perPage = 10;
+let recentTower = "";
+let defTower = "";
 
 // ─── CSV download ───
 function downloadCSV(filename, rows){
@@ -303,17 +376,124 @@ function renderRecentPage(){
 // ─── Filter recent ───
 function filterRecent(){
   const q = document.getElementById("recentSearch").value.trim().toLowerCase();
-  recentFiltered = q
-    ? recentAll.filter(x =>
-        (x.name||"").toLowerCase().includes(q) ||
-        (x.receiptNo||"").toLowerCase().includes(q) ||
-        (x.method||"").toLowerCase().includes(q) ||
-        (`${x.tower}-${x.flat}`).toLowerCase().includes(q) ||
-        String(x.amount||"").includes(q)
-      )
-    : [...recentAll];
+  recentFiltered = recentAll.filter(x => {
+    const towerMatch = !recentTower || String(x.tower||"") === recentTower;
+    const textMatch  = !q ||
+      (x.name||"").toLowerCase().includes(q) ||
+      (x.receiptNo||"").toLowerCase().includes(q) ||
+      (x.method||"").toLowerCase().includes(q) ||
+      (`${x.tower||""}-${x.flat||""}`).toLowerCase().includes(q) ||
+      String(x.amount||"").includes(q);
+    return towerMatch && textMatch;
+  });
   recentPage = 1;
   renderRecentPage();
+}
+
+// ─── Render tower-wise stats (uses towerStats from GAS) ───
+function renderTowerStats(data){
+  const grid = document.getElementById("towerStatsGrid");
+  const towerStats = data.towerStats || [];
+
+  if(!towerStats.length){ grid.innerHTML=`<div class="muted">No data yet</div>`; return; }
+
+  const grandTotal = towerStats.reduce((s,v)=>s+v.collected,0);
+
+  grid.innerHTML = towerStats.map(v => {
+    const t         = v.tower;
+    const paidFlats = v.paidFlats   || 0;
+    const totalFlats= v.totalFlats  || 0;
+    const unpaid    = v.unpaidFlats || 0;
+    const pct       = grandTotal > 0 ? Math.round((v.collected/grandTotal)*1000)/10 : 0;
+    const flatPct   = totalFlats > 0 ? Math.round((paidFlats/totalFlats)*100) : 0;
+
+    // Owner row
+    const ownerPct  = v.ownerTotal  > 0 ? Math.round((v.ownerPaid /v.ownerTotal )*100) : 0;
+    const tenantPct = v.tenantTotal > 0 ? Math.round((v.tenantPaid/v.tenantTotal)*100) : 0;
+    const showOT    = (v.ownerTotal > 0 || v.tenantTotal > 0);
+
+    const otHTML = showOT ? `
+      <div class="ot-row">
+        <div class="ot-cell">
+          <div class="ot-label">👑 Owners</div>
+          <div class="ot-value owner">${fmt(v.ownerCollected)}</div>
+          <div class="ot-sub">${v.ownerPaid}/${v.ownerTotal} paid (${ownerPct}%)</div>
+        </div>
+        <div class="ot-cell">
+          <div class="ot-label">🏠 Tenants</div>
+          <div class="ot-value tenant">${fmt(v.tenantCollected)}</div>
+          <div class="ot-sub">${v.tenantPaid}/${v.tenantTotal} paid (${tenantPct}%)</div>
+        </div>
+      </div>` : (v.unknownCollected > 0 ? `
+      <div class="ot-row" style="grid-template-columns:1fr;">
+        <div class="ot-cell">
+          <div class="ot-label">ℹ️ Type not set in Residents sheet</div>
+          <div class="ot-sub" style="font-size:11px;color:var(--text-muted);">Add Owner/Tenant column to Residents sheet to see breakdown</div>
+        </div>
+      </div>` : "");
+
+    return `<div class="tower-row">
+      <div class="tower-row-header">
+        <span class="tower-name">🏢 Tower ${t}</span>
+        <span class="tower-collected">${fmt(v.collected)}</span>
+      </div>
+      <div class="tower-meta">
+        <div class="tower-meta-item">
+          <div class="tower-meta-label">Paid Flats</div>
+          <div class="tower-meta-val green">${paidFlats}${totalFlats?` / ${totalFlats}`:''}</div>
+        </div>
+        <div class="tower-meta-item">
+          <div class="tower-meta-label">Unpaid</div>
+          <div class="tower-meta-val red">${unpaid}</div>
+        </div>
+        <div class="tower-meta-item">
+          <div class="tower-meta-label">% of Total</div>
+          <div class="tower-meta-val">${pct}%</div>
+        </div>
+      </div>
+      <div class="tower-bar-wrap">
+        <div class="tower-bar" style="width:${flatPct}%"></div>
+      </div>
+      <div class="tower-bar-text">${flatPct}% flats paid &nbsp;·&nbsp; UPI ${fmt(v.upi)} &nbsp;·&nbsp; Cash ${fmt(v.cash)}</div>
+      ${otHTML}
+    </div>`;
+  }).join("");
+}
+
+// ─── Render walk-in donors table ───
+function renderWalkins(list, total, upi, cash){
+  const card = document.getElementById("walkinCard");
+  const body = document.getElementById("walkinBody");
+  const footer = document.getElementById("walkinFooter");
+
+  if(!list || !list.length){
+    card.style.display = "none";
+    return;
+  }
+  card.style.display = "block";
+
+  body.innerHTML = list.map((x,i) => {
+    const badge = (x.method||"").toUpperCase()==="UPI"
+      ? `<span class="badge badge-upi">UPI</span>`
+      : `<span class="badge badge-cash">Cash</span>`;
+    const loc = (x.tower||x.flat)
+      ? `${x.tower||"?"}${x.flat ? `-${x.flat}` : " (no flat)"}`
+      : `<span style="color:var(--text-muted);">—</span>`;
+    return `<tr>
+      <td class="muted">${i+1}</td>
+      <td style="font-weight:600;">${x.name||"Unknown"}</td>
+      <td style="font-weight:700;color:var(--gold-light);">${fmt(x.amount)}</td>
+      <td>${badge}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${loc}</td>
+      <td style="font-size:11px;color:var(--text-muted);">${x.receiptNo||"—"}</td>
+    </tr>`;
+  }).join("");
+
+  footer.innerHTML =
+    `Total: <b style="color:var(--gold-light);">${fmt(total)}</b> &nbsp;·&nbsp; `+
+    `UPI: <b style="color:#a5b4fc;">${fmt(upi)}</b> &nbsp;·&nbsp; `+
+    `Cash: <b style="color:#86efac;">${fmt(cash)}</b> &nbsp;·&nbsp; `+
+    `<span style="color:var(--text-muted);">${list.length} donor${list.length!==1?'s':''}</span>`;
 }
 
 // ─── Load stats ───
@@ -339,8 +519,26 @@ async function loadStats(){
   const paidPct = data.residentsCount
     ? Math.round((data.paidCount / data.residentsCount) * 1000) / 10 : 0;
   document.getElementById("paidPct").textContent   =
-    `${paidPct}% flats` + (walkin > 0 ? ` + ${walkin} walk-in donor${walkin>1?'s':''}` : '');
+    `${paidPct}% flats` + (walkin > 0 ? ` + ${walkin} walk-in` : '');
   document.getElementById("unpaid").textContent    = `${data.unpaidCount}`;
+
+  // Walk-in donors stat card
+  document.getElementById("walkinTotal").textContent = fmt(data.walkinTotal || 0);
+  document.getElementById("walkinSub").textContent   =
+    walkin > 0
+      ? `${walkin} donor${walkin!==1?'s':''} · UPI ${fmt(data.walkinUpi||0)} · Cash ${fmt(data.walkinCash||0)}`
+      : "No walk-in donors yet";
+  renderWalkins(data.walkinList||[], data.walkinTotal||0, data.walkinUpi||0, data.walkinCash||0);
+
+  // Owner / Tenant global summary
+  const ownerPaidPct  = data.ownerResidents  > 0 ? Math.round((data.ownerPaidCount /data.ownerResidents )*100) : 0;
+  const tenantPaidPct = data.tenantResidents > 0 ? Math.round((data.tenantPaidCount/data.tenantResidents)*100) : 0;
+  document.getElementById("ownerTotal").textContent  = fmt(data.ownerTotal  || 0);
+  document.getElementById("tenantTotal").textContent = fmt(data.tenantTotal || 0);
+  document.getElementById("ownerSub").textContent    =
+    data.ownerResidents  ? `${data.ownerPaidCount}/${data.ownerResidents} paid (${ownerPaidPct}%)`  : "No Type data";
+  document.getElementById("tenantSub").textContent   =
+    data.tenantResidents ? `${data.tenantPaidCount}/${data.tenantResidents} paid (${tenantPaidPct}%)` : "No Type data";
 
   const h = data.highest || {};
   document.getElementById("highest").textContent  =
@@ -353,14 +551,50 @@ async function loadStats(){
 
   // Recent — sort newest first
   recentAll = (data.recent || []).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+  renderTowerStats(data);
+  populateTowerDropdowns();
   filterRecent();
+  filterDef();
 
   document.getElementById("lastUpdated").textContent =
     "Last updated: " + new Date().toLocaleTimeString("en-IN");
 }
 
+// ─── Populate tower dropdowns from data ───
+function populateTowerDropdowns(){
+  const recentTowers = [...new Set(recentAll.map(x => x.tower).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+  const defTowers    = [...new Set(defaultersAll.map(x => x.tower || x.key?.split("-")[0]).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
+
+  const rSel = document.getElementById("recentTowerFilter");
+  const dSel = document.getElementById("defTowerFilter");
+  const rVal = rSel.value, dVal = dSel.value;
+
+  rSel.innerHTML = `<option value="">All Towers</option>` +
+    recentTowers.map(t => `<option value="${t}"${t===rVal?` selected`:``}>Tower ${t}</option>`).join("");
+  dSel.innerHTML = `<option value="">All Towers</option>` +
+    defTowers.map(t => `<option value="${t}"${t===dVal?` selected`:``}>Tower ${t}</option>`).join("");
+}
+
+// ─── Filter defaulters (tower + text) ───
+function filterDef(){
+  const q = document.getElementById("defSearch").value.trim().toLowerCase();
+  const filtered = defaultersAll.filter(x => {
+    const tower = x.tower || (x.key||"").split("-")[0];
+    const towerMatch = !defTower || tower === defTower;
+    const textMatch  = !q ||
+      (x.key||"").toLowerCase().includes(q) ||
+      (x.name||"").toLowerCase().includes(q);
+    return towerMatch && textMatch;
+  });
+  renderDef(filtered);
+}
+
 // ─── Search events ───
 document.getElementById("recentSearch").addEventListener("input", filterRecent);
+document.getElementById("recentTowerFilter").addEventListener("change", e => {
+  recentTower = e.target.value;
+  filterRecent();
+});
 
 document.getElementById("perPage").addEventListener("change", e => {
   perPage = Number(e.target.value);
@@ -368,11 +602,10 @@ document.getElementById("perPage").addEventListener("change", e => {
   renderRecentPage();
 });
 
-document.getElementById("defSearch").addEventListener("input", () => {
-  const q = document.getElementById("defSearch").value.trim().toLowerCase();
-  renderDef(defaultersAll.filter(x =>
-    (x.key||"").toLowerCase().includes(q) || (x.name||"").toLowerCase().includes(q)
-  ));
+document.getElementById("defSearch").addEventListener("input", filterDef);
+document.getElementById("defTowerFilter").addEventListener("change", e => {
+  defTower = e.target.value;
+  filterDef();
 });
 
 // ─── Export buttons ───
